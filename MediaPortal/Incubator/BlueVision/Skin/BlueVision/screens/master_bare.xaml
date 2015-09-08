@@ -112,10 +112,10 @@ Parameters which have to be accessible by a DynamicResource lookup:
         <ColumnDefinition Width="150"/>
       </Grid.ColumnDefinitions>
 
-      <Control x:Name="MenuButtonDummy" HorizontalAlignment="Stretch" Template="{DynamicResource ResourceKey=Menu_Button_Dummy}"> </Control>
-      <Control x:Name="MenuButtonDummyConfig" HorizontalAlignment="Stretch" Template="{DynamicResource ResourceKey=Menu_Button_DummyConfig}"> </Control>
-      <Control x:Name="MenuButtonPlaceholder" HorizontalAlignment="Stretch" Template="{DynamicResource ResourceKey=Menu_Button_Placeholder}"> </Control>
-      
+      <Control x:Name="MenuButtonDummy" HorizontalAlignment="Stretch" Template="{DynamicResource ResourceKey=Menu_Button_Dummy}"></Control>
+      <Control x:Name="MenuButtonDummyConfig" HorizontalAlignment="Stretch" Template="{DynamicResource ResourceKey=Menu_Button_DummyConfig}"></Control>
+      <Control x:Name="MenuButtonPlaceholder" HorizontalAlignment="Stretch" Template="{DynamicResource ResourceKey=Menu_Button_Placeholder}"></Control>
+
 
       <StackPanel Grid.Row="0" Grid.Column="0" Margin="145,-5,0,0" VerticalAlignment="Center" >
         <Label x:Name="SelectedItem"
@@ -127,16 +127,16 @@ Parameters which have to be accessible by a DynamicResource lookup:
           <Control.TemplateControl>
             <Include Source="screens\MediaItemsListHeader.inc"/>
           </Control.TemplateControl>
-        </Control>       
+        </Control>
       </StackPanel>
-            
-        <!-- Main Menu Group tabs -->
-        <!-- use custom ListView to modify focus behavior -->
+
+      <!-- Main Menu Group tabs -->
+      <!-- use custom ListView to modify focus behavior -->
 
       <!--Image Source="Menu_Background.png" Grid.Row="0" Grid.Column="1" Opacity="0.25" Stretch="Fill" Height="90" Margin="15,-5,15,-5"
                VerticalAlignment="Center" HorizontalAlignment="Center"/-->
 
-        <bvm:GroupMenuListView x:Name="GroupList" Style="{ThemeResource HomeGroupListViewStyle}" Grid.Row="0" Grid.Column="1"
+      <bvm:GroupMenuListView x:Name="GroupList" Style="{ThemeResource HomeGroupListViewStyle}" Grid.Row="0" Grid.Column="1"
                                VerticalAlignment="Center" HorizontalAlignment="Center"
                                HomeMenuModel="{StaticResource MenuModel}" Margin="-5,8,-5,-8"
                                IsEnabled="{Binding Source={StaticResource MenuModel},Path=!IsMenuOpen}"
@@ -148,13 +148,13 @@ Parameters which have to be accessible by a DynamicResource lookup:
       </bvm:GroupMenuListView>
 
       <!-- Time & Date -->
-        <StackPanel Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" Margin="-70,-5,5,0" VerticalAlignment="Center">
-          <Label x:Name="TimeLabel"  Content="{Binding Source={StaticResource TimeModel}, Path=CurrentTime}"
+      <StackPanel Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" Margin="-70,-5,5,0" VerticalAlignment="Center">
+        <Label x:Name="TimeLabel"  Content="{Binding Source={StaticResource TimeModel}, Path=CurrentTime}"
                 FontSize="{ThemeResource BiggerFontSize}" FontFamily="DefaultBold" 
                 Color="{ThemeResource TextColor}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
-          <Label x:Name="DateLabel" Content="{Binding Source={StaticResource TimeModel}, Path=CurrentDate}" FontSize="{ThemeResource SmallFontSize}" FontFamily="DefaultBold"
+        <Label x:Name="DateLabel" Content="{Binding Source={StaticResource TimeModel}, Path=CurrentDate}" FontSize="{ThemeResource SmallFontSize}" FontFamily="DefaultBold"
                Color="{ThemeResource TextColor}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,-8,0,0"/>
-        </StackPanel>
+      </StackPanel>
 
       <!-- Power button -->
       <!--StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center"-->
@@ -189,16 +189,30 @@ Parameters which have to be accessible by a DynamicResource lookup:
             </Trigger.Setters>
           </Trigger>
         </Button.Triggers>
-      </Button>    
-      
-      
+      </Button>
+
       <!--/StackPanel-->
 
       <Image Source="shadow_top.png" Grid.Row="1" Grid.ColumnSpan="4" Margin="0,0,0,0" />
     </Grid>
 
     <!-- Order matters here: The client area control has to be the last control (LastChildFill) -->
-    <Control x:Name="ClientArea" Grid.Row="2" Template="{DynamicResource ResourceKey=Client_Template}" Margin="115,17,115,-3"/>
+    <!-- This is the normal content for home (and all other screens) -->
+    <Control x:Name="ClientArea" Grid.Row="2" Template="{DynamicResource ResourceKey=Client_Template}" IsVisible="{Binding Source={StaticResource MenuModel},Path=!IsPlayerActive}"  Margin="115,17,115,-3"/>
+
+    <!-- Alternative content if any player is active -->
+    <DockPanel x:Name="PlayerControlPanel" DockPanel.Dock="Bottom" Grid.Row="2" IsVisible="{Binding Source={StaticResource MenuModel},Path=IsPlayerActive}" HorizontalAlignment="Center">
+
+      <mp_special_controls:PlayerControl x:Name="PrimaryPlayerControl" Margin="3" Style="{ThemeResource NavigationScreenPlayerControlStyle}" Width="710" DockPanel.Dock="Left"
+                HorizontalAlignment="Left" VerticalAlignment="Top" Height="205"
+                AutoVisibility="True" PlayerContext="PrimaryPlayer"/>
+
+      <mp_special_controls:PlayerControl x:Name="SecondaryPlayerControl" Margin="3" Style="{ThemeResource NavigationScreenPlayerControlStyleSecondary}" Width="710" DockPanel.Dock="Right"
+                HorizontalAlignment="Right" VerticalAlignment="Top"
+                AutoVisibility="True" PlayerContext="SecondaryPlayer"/>
+
+    </DockPanel>
+
 
     <Image Source="shadow_bottom.png" Margin="-115,0,-115,0" Grid.Row="3" VerticalAlignment="Top" />
 
@@ -215,45 +229,6 @@ Parameters which have to be accessible by a DynamicResource lookup:
          HorizontalAlignment="Stretch"
          Template="{DynamicResource ResourceKey=Alternative_Footer_Template}">
       </Control>
-
-      <!-- PlayerControlsPanel Focusable="True"-->
-      <Grid x:Name="FooterPanel" Grid.Row="3" Height="{ThemeResource FooterPanelHeight}" VerticalAlignment="Top" RenderTransformOrigin="0.5,0.5"
-                  IsEnabled="{Binding Source={StaticResource MenuModel},Path=!IsMenuOpen}">
-
-        <Grid.RenderTransform>
-          <!--<TranslateTransform Y="200" />-->
-        </Grid.RenderTransform>
-        <Grid.Triggers>
-          <!--<Trigger Property="IsMouseOver" Value="True">
-            <Trigger.EnterActions>
-              <BeginStoryboard x:Name="SlideIn_BeginStoryboard" Storyboard="{ThemeResource SlideInStoryboard}"/>
-            </Trigger.EnterActions>
-            <Trigger.ExitActions>
-              <StopStoryboard BeginStoryboardName="SlideIn_BeginStoryboard"/>
-            </Trigger.ExitActions>
-          </Trigger>-->
-          <!--<Trigger Property="IsKeyboardFocusWithin" Value="True">
-            <Trigger.EnterActions>
-              <BeginStoryboard x:Name="SlideIn_BeginStoryboard2" Storyboard="{ThemeResource SlideInStoryboard}"/>
-            </Trigger.EnterActions>
-            <Trigger.ExitActions>
-              <StopStoryboard BeginStoryboardName="SlideIn_BeginStoryboard2"/>
-            </Trigger.ExitActions>
-          </Trigger>-->
-        </Grid.Triggers>
-
-        <DockPanel x:Name="PlayerControlPanel" DockPanel.Dock="Bottom" Grid.Row="1" LastChildFill="False">
-
-          <mp_special_controls:PlayerControl x:Name="PrimaryPlayerControl" Margin="3" Style="{ThemeResource NavigationScreenPlayerControlStyle}" Width="710" DockPanel.Dock="Left"
-                HorizontalAlignment="Left" VerticalAlignment="Top" Height="205"
-                AutoVisibility="True" PlayerContext="PrimaryPlayer"/>
-
-          <mp_special_controls:PlayerControl x:Name="SecondaryPlayerControl" Margin="3" Style="{ThemeResource NavigationScreenPlayerControlStyleSecondary}" Width="710" DockPanel.Dock="Right"
-                HorizontalAlignment="Right" VerticalAlignment="Top"
-                AutoVisibility="True" PlayerContext="SecondaryPlayer"/>
-
-        </DockPanel>
-      </Grid>
 
     </Grid>
     <!-- FooterPanel -->
