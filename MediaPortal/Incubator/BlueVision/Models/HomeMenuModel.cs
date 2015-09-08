@@ -30,6 +30,7 @@ using MediaPortal.Common;
 using MediaPortal.Common.Commands;
 using MediaPortal.Common.General;
 using MediaPortal.Common.Logging;
+using MediaPortal.Common.Messaging;
 using MediaPortal.Common.Services.Settings;
 using MediaPortal.Common.Settings;
 using MediaPortal.UI.Presentation.DataObjects;
@@ -38,6 +39,7 @@ using MediaPortal.UI.Presentation.Workflow;
 using MediaPortal.UiComponents.BlueVision.Settings;
 using MediaPortal.UiComponents.SkinBase.General;
 using MediaPortal.UiComponents.SkinBase.Models;
+using MediaPortal.UI.Presentation.Players;
 using MediaPortal.UI.SkinEngine.MpfElements;
 using MediaPortal.Utilities.Xml;
 
@@ -62,7 +64,14 @@ namespace MediaPortal.UiComponents.BlueVision.Models
     protected AbstractProperty _lastSelectedItemProperty;
     protected AbstractProperty _lastSelectedItemNameProperty;
     protected AbstractProperty _isHomeProperty;
+    protected AbstractProperty _isPlayerActiveProperty;
     protected bool _noSettingsRefresh;
+    protected bool _isPlayerActive;
+    protected List<Guid> _shortcutWfStates = new List<Guid>
+    {
+      new Guid("D83604C0-0936-4416-9DE8-7B6D7C50023C"), // CP
+      new Guid("9C3E6701-6856-49ec-A4CD-0CEB15F385F6"), // FS
+    };
 
     #endregion
 
@@ -183,6 +192,17 @@ namespace MediaPortal.UiComponents.BlueVision.Models
       set { _isHomeProperty.SetValue(value); }
     }
 
+    public AbstractProperty IsPlayerActiveProperty
+    {
+      get { return _isPlayerActiveProperty; }
+    }
+
+    public bool IsPlayerActive
+    {
+      get { return (bool)_isPlayerActiveProperty.GetValue(); }
+      set { _isPlayerActiveProperty.SetValue(value); }
+    }
+
     #endregion
 
     public HomeMenuModel()
@@ -190,7 +210,10 @@ namespace MediaPortal.UiComponents.BlueVision.Models
       _lastSelectedItemProperty = new WProperty(typeof(ListItem), null);
       _lastSelectedItemNameProperty = new WProperty(typeof(string), null);
       _isHomeProperty = new WProperty(typeof(bool), false);
+      _isPlayerActiveProperty = new WProperty(typeof(bool), false);
       IsHomeProperty.Attach(IsHomeChanged);
+
+      SubscribeToMessages();
 
       ReadPositions();
 
@@ -271,6 +294,42 @@ namespace MediaPortal.UiComponents.BlueVision.Models
             }
             _mainMenuGroupList.Add(groupItem);
           }
+          // Look for "shortcut items" that will be placed next to the regular groups
+          foreach (var menuItem in MenuItems)
+          {
+            object action;
+            if (!menuItem.AdditionalProperties.TryGetValue(Consts.KEY_ITEM_ACTION, out action))
+              continue;
+            WorkflowAction wfAction = action as WorkflowAction;
+            if (wfAction == null)
+              continue;
+
+            if (!_shortcutWfStates.Contains(wfAction.ActionId))
+              continue;
+
+            string groupId = wfAction.ActionId.ToString();
+            string groupName = groupId;
+            var groupItem = new GroupMenuListItem(Consts.KEY_NAME, groupName);
+            if (_menuSettings.Settings.DisableAutoSelection)
+              groupItem.Command = new MethodDelegateCommand(() =>
+              {
+                wfAction.Execute();
+              });
+
+            groupItem.AdditionalProperties["Id"] = groupId;
+            _mainMenuGroupList.Add(groupItem);
+          }
+
+          // "Currently playing button" if any player is active
+          //if (_isPlayerActive)
+          //{
+          //  var groupItem = new GroupMenuListItem(Consts.KEY_NAME, MenuSettings.MENU_NAME_PLAYING);
+          //  if (_menuSettings.Settings.DisableAutoSelection)
+          //    groupItem.Command = new MethodDelegateCommand(() => IsPlayerActive = true );
+
+          //  groupItem.AdditionalProperties["Id"] = MenuSettings.MENU_ID_PLAYING;
+          //  _mainMenuGroupList.Add(groupItem);
+          //}
         }
       }
       _mainMenuGroupList.FireChange();
@@ -308,7 +367,7 @@ namespace MediaPortal.UiComponents.BlueVision.Models
         // Under "others" all items are places, that do not fit into any other category
         if (CurrentKey == MenuSettings.MENU_NAME_OTHERS)
         {
-          bool found = _menuSettings.Settings.MenuItems.Keys.Any(key => _menuSettings.Settings.MenuItems[key].ContainsKey(wfAction.ActionId));
+          bool found = IsManuallyPositioned(wfAction);
           if (!found)
           {
             GridListItem gridItem = new GridListItem(menuItem)
@@ -341,8 +400,21 @@ namespace MediaPortal.UiComponents.BlueVision.Models
       _positionedItems.FireChange();
     }
 
+    private bool IsManuallyPositioned(WorkflowAction wfAction)
+    {
+      return _menuSettings.Settings.MenuItems.Keys.Any(key => _menuSettings.Settings.MenuItems[key].ContainsKey(wfAction.ActionId));
+    }
+
     private void SetGroup(string groupId)
     {
+      bool wasPlayerActive = IsPlayerActive;
+      if (wasPlayerActive)
+      {
+        IsPlayerActive = false;
+        // Do not navigate in workflow, but only toggle visibility
+        return;
+      }
+
       if (_menuSettings.Settings.DefaultMenuGroupId == groupId)
         return;
       _menuSettings.Settings.DefaultMenuGroupId = groupId;
@@ -357,7 +429,7 @@ namespace MediaPortal.UiComponents.BlueVision.Models
           UpdateSelectedGroup();
         }
       }
-      finally 
+      finally
       {
         _noSettingsRefresh = false;
       }
@@ -484,6 +556,38 @@ namespace MediaPortal.UiComponents.BlueVision.Models
         _menuSettings.Settings.MainMenuGroupNames.Add(new GroupItemSetting { Name = MenuSettings.MENU_NAME_OTHERS, Id = new Guid(MenuSettings.MENU_ID_OTHERS) });
         ServiceRegistration.Get<ISettingsManager>().Save(menuSettings);
       }
+    }
+
+    private void SubscribeToMessages()
+    {
+      if (_messageQueue == null)
+        return;
+      _messageQueue.SubscribeToMessageChannel(PlayerManagerMessaging.CHANNEL);
+      _messageQueue.MessageReceived += OnMessageReceived;
+    }
+
+    private void OnMessageReceived(AsynchronousMessageQueue queue, SystemMessage message)
+    {
+      if (message.ChannelName == PlayerManagerMessaging.CHANNEL)
+      {
+        // React to player changes
+        PlayerManagerMessaging.MessageType messageType = (PlayerManagerMessaging.MessageType)message.MessageType;
+        switch (messageType)
+        {
+          case PlayerManagerMessaging.MessageType.PlayerEnded:
+          case PlayerManagerMessaging.MessageType.PlayerStopped:
+          case PlayerManagerMessaging.MessageType.PlayerStarted:
+            UpdatePlayerState();
+            break;
+        }
+      }
+    }
+
+    private void UpdatePlayerState()
+    {
+      _isPlayerActive = ServiceRegistration.Get<IPlayerContextManager>().PlayerContexts.Any(pc => pc.IsActive);
+      CreateMenuGroupItems();
+      CreatePositionedItems();
     }
   }
 }

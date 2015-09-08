@@ -280,7 +280,7 @@
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate>
-          <!--Rectangle x:Name="ButtonControlRectangle" StrokeThickness="1.5" Opacity="0" Margin="-2">
+          <Rectangle x:Name="ButtonControlRectangle" StrokeThickness="1.5" Opacity="0" Margin="-2">
             <Rectangle.Stroke>
               <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                 <GradientStop Color="#00A0A0A0" Offset="0.05"/>
@@ -288,7 +288,7 @@
                 <GradientStop Color="#00A0A0A0" Offset="0.95"/>
               </LinearGradientBrush>
             </Rectangle.Stroke>
-          </Rectangle-->
+          </Rectangle>
         </ControlTemplate>
       </Setter.Value>
     </Setter>

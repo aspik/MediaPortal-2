@@ -50,6 +50,8 @@ namespace MediaPortal.UiComponents.BlueVision.Settings
     public const string MENU_ID_OTHERS = "D805F21B-0A1F-4323-BEB5-B108778F89AA";
     public const string MENU_NAME_HOME = "[Menu.Home]";
     public const string MENU_ID_HOME = "DF153D5E-0CD9-416c-B18B-E09AD5A864D8";
+    public const string MENU_NAME_PLAYING = "[Menu.CurrentlyPlaying]";
+    public const string MENU_ID_PLAYING = "05D4F591-CB92-4204-955A-5FF665BD8727";
 
     public const int DEFAULT_ROWSPAN_SMALL = 2;
     public const int DEFAULT_COLSPAN_SMALL = 2;
@@ -90,9 +92,6 @@ namespace MediaPortal.UiComponents.BlueVision.Settings
 
   public class GroupItemSetting
   {
-    public GroupItemSetting()
-    { }
-
     public string Name { get; set; }
 
     public Guid Id { get; set; }
