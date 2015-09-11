@@ -67,11 +67,6 @@ namespace MediaPortal.UiComponents.BlueVision.Models
     protected AbstractProperty _isPlayerActiveProperty;
     protected bool _noSettingsRefresh;
     protected bool _isPlayerActive;
-    protected List<Guid> _shortcutWfStates = new List<Guid>
-    {
-      new Guid("D83604C0-0936-4416-9DE8-7B6D7C50023C"), // CP
-      new Guid("9C3E6701-6856-49ec-A4CD-0CEB15F385F6"), // FS
-    };
 
     #endregion
 
@@ -304,32 +299,23 @@ namespace MediaPortal.UiComponents.BlueVision.Models
             if (wfAction == null)
               continue;
 
-            if (!_shortcutWfStates.Contains(wfAction.ActionId))
+            var shortCut = _menuSettings.Settings.MainMenuShortCuts.FirstOrDefault(sc => sc.ActionId == wfAction.ActionId);
+            if (shortCut == null)
               continue;
 
-            string groupId = wfAction.ActionId.ToString();
-            string groupName = groupId;
+            string groupId = shortCut.Id.ToString();
+            string groupName = shortCut.Name;
             var groupItem = new GroupMenuListItem(Consts.KEY_NAME, groupName);
             if (_menuSettings.Settings.DisableAutoSelection)
               groupItem.Command = new MethodDelegateCommand(() =>
               {
                 wfAction.Execute();
+                SetGroup(groupId, true);
               });
 
             groupItem.AdditionalProperties["Id"] = groupId;
             _mainMenuGroupList.Add(groupItem);
           }
-
-          // "Currently playing button" if any player is active
-          //if (_isPlayerActive)
-          //{
-          //  var groupItem = new GroupMenuListItem(Consts.KEY_NAME, MenuSettings.MENU_NAME_PLAYING);
-          //  if (_menuSettings.Settings.DisableAutoSelection)
-          //    groupItem.Command = new MethodDelegateCommand(() => IsPlayerActive = true );
-
-          //  groupItem.AdditionalProperties["Id"] = MenuSettings.MENU_ID_PLAYING;
-          //  _mainMenuGroupList.Add(groupItem);
-          //}
         }
       }
       _mainMenuGroupList.FireChange();
@@ -405,16 +391,8 @@ namespace MediaPortal.UiComponents.BlueVision.Models
       return _menuSettings.Settings.MenuItems.Keys.Any(key => _menuSettings.Settings.MenuItems[key].ContainsKey(wfAction.ActionId));
     }
 
-    private void SetGroup(string groupId)
+    private void SetGroup(string groupId, bool isShortCut = false)
     {
-      bool wasPlayerActive = IsPlayerActive;
-      if (wasPlayerActive)
-      {
-        IsPlayerActive = false;
-        // Do not navigate in workflow, but only toggle visibility
-        return;
-      }
-
       if (_menuSettings.Settings.DefaultMenuGroupId == groupId)
         return;
       _menuSettings.Settings.DefaultMenuGroupId = groupId;
@@ -423,11 +401,17 @@ namespace MediaPortal.UiComponents.BlueVision.Models
       {
         _noSettingsRefresh = true;
         ServiceRegistration.Get<ISettingsManager>().Save(_menuSettings.Settings);
-        if (NavigateToHome())
+        if (isShortCut)
         {
-          CreatePositionedItems();
-          UpdateSelectedGroup();
+          //if (NavigateBack())
+            UpdateSelectedGroup();
         }
+        else
+          if (NavigateToHome())
+          {
+            CreatePositionedItems();
+            UpdateSelectedGroup();
+          }
       }
       finally
       {
@@ -446,6 +430,16 @@ namespace MediaPortal.UiComponents.BlueVision.Models
         lmm.UpdateItems();
       }
     }
+
+    //private bool NavigateBack()
+    //{
+    //  IWorkflowManager workflowManager = ServiceRegistration.Get<IWorkflowManager>();
+    //  if (workflowManager == null)
+    //    return false;
+
+    //  workflowManager.NavigatePop(1);
+    //  return true;
+    //}
 
     private bool NavigateToHome()
     {
@@ -492,6 +486,15 @@ namespace MediaPortal.UiComponents.BlueVision.Models
         _menuSettings.SettingsChanged += OnSettingsChanged;
       }
       var menuSettings = _menuSettings.Settings;
+      if (menuSettings.MainMenuShortCuts.Count == 0)
+      {
+        menuSettings.MainMenuShortCuts = new List<GroupItemSetting>
+        {
+          new GroupItemSetting { Name = MenuSettings.MENU_NAME_PLAYING, Id = new Guid(MenuSettings.MENU_ID_PLAYING), ActionId = MenuSettings.WF_ACTION_CP },
+          //new GroupItemSetting { Name = MenuSettings.MENU_NAME_HOME, ActionId = MenuSettings.WF_ACTION_FS },
+        };
+        ServiceRegistration.Get<ISettingsManager>().Save(menuSettings);
+      }
       if (menuSettings.MenuItems.Count == 0)
       {
         menuSettings.MainMenuGroupNames = new List<GroupItemSetting>
