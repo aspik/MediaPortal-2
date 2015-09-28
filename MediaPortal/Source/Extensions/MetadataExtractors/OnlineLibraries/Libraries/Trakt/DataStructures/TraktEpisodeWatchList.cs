@@ -3,9 +3,9 @@
 namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.DataStructures
 {
   [DataContract]
-  public class TraktAccount : TraktAuthentication
+  public class TraktEpisodeWatchList : TraktEpisodeSummaryEx
   {
-    [DataMember(Name = "email")]
-    public string Email { get; set; }
+    [DataMember(Name = "listed_at")]
+    public string ListedAt { get; set; }
   }
 }

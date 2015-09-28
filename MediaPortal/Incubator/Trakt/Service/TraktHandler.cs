@@ -39,6 +39,7 @@ using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.DataStructures;
 using MediaPortal.UI.Presentation.Players;
 using MediaPortal.UI.Presentation.Players.ResumeState;
 using MediaPortal.UI.Services.Players;
+using TraktSettings = MediaPortal.UiComponents.Trakt.Settings.TraktSettings;
 
 namespace MediaPortal.UiComponents.Trakt.Service
 {
@@ -57,7 +58,7 @@ namespace MediaPortal.UiComponents.Trakt.Service
 
     private AsynchronousMessageQueue _messageQueue;
     private readonly object _syncObj = new object();
-    private readonly SettingsChangeWatcher<Settings.TraktSettings> _settings = new SettingsChangeWatcher<Settings.TraktSettings>();
+    private readonly SettingsChangeWatcher<TraktSettings> _settings = new SettingsChangeWatcher<TraktSettings>();
     private readonly Dictionary<IPlayerSlotController, PositionWatcher> _progressUpdateWorks = new Dictionary<IPlayerSlotController, PositionWatcher>();
 
     public TraktHandler()
@@ -318,7 +319,7 @@ namespace MediaPortal.UiComponents.Trakt.Service
       if (!starting && progress < WATCHED_PERCENT)
         state = TraktScrobbleStates.cancelwatching;
 
-      scrobbleData.PluginVersion = TraktSettings.Version;
+      scrobbleData.PluginVersion = Extensions.OnlineLibraries.Libraries.Trakt.TraktSettings.Version;
       scrobbleData.MediaCenter = "MediaPortal 2";
       scrobbleData.MediaCenterVersion = Assembly.GetEntryAssembly().GetName().Version.ToString();
       scrobbleData.MediaCenterBuildDate = String.Empty;

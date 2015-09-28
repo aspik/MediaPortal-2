@@ -1,19 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
-using System.Threading;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.DataStructures;
+using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Enums;
 
 namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 {
   public class TraktSettings
   {
-    private readonly Object _lockObject = new object();
+    private static Object lockObject = new object();
 
     #region Settings
-    int SettingsVersion = 1;
 
-    public List<TraktAuthentication> UserLogins { get; set; }
+    private int SettingsVersion = 1;
+
+    public static List<TraktAuthentication> UserLogins { get; set; }
     public bool KeepTraktLibraryClean { get; set; }
     public List<String> BlockedFilenames { get; set; }
     public List<String> BlockedFolders { get; set; }
@@ -32,6 +34,11 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     public int WatchListShowsDefaultLayout { get; set; }
     public int WatchListEpisodesDefaultLayout { get; set; }
     public int ListsDefaultLayout { get; set; }
+    public static TraktLastSyncActivities LastSyncActivities { get; set; }
+    public static IEnumerable<TraktCache.ListActivity> LastListActivities { get; set; }
+    public static bool SkipMoviesWithNoIdsOnSync { get; set; }
+    public static int SyncBatchSize { get; set; }
+    public static int SyncPlaybackCacheExpiry { get; set; }
     public int ListItemsDefaultLayout { get; set; }
     public int RelatedMoviesDefaultLayout { get; set; }
     public int RelatedShowsDefaultLayout { get; set; }
@@ -44,7 +51,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     public int DefaultCalendarStartDate { get; set; }
     public bool DownloadFullSizeFanart { get; set; }
     public bool DownloadFanart { get; set; }
-    public int WebRequestCacheMinutes { get; set; }
+    public static int WebRequestCacheMinutes { get; set; }
     public bool GetFollowerRequestsOnStartup { get; set; }
     public int MovingPicturesCategoryId { get; set; }
     public bool MovingPicturesCategories { get; set; }
@@ -112,6 +119,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     public bool FilterTrendingOnDashboard { get; set; }
     public bool UseTrailersPlugin { get; set; }
     public bool IgnoreWatchedPercentOnDVD { get; set; }
+
     #endregion
 
     #region Constants
@@ -127,10 +135,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static string Username
     {
-      get
-      {
-        return _username;
-      }
+      get { return _username; }
       set
       {
         _username = value;
@@ -138,14 +143,11 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       }
     }
 
-    static string _username = null;
+    private static string _username = null;
 
     public static string Password
     {
-      get
-      {
-        return _password;
-      }
+      get { return _password; }
       set
       {
         _password = value;
@@ -153,60 +155,56 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       }
     }
 
-    static string _password = null;
+    private static string _password = null;
 
     /// <summary>
     /// Show Advanced or Simple Ratings Dialog
     /// Settings is Synced from Server
     /// </summary>
-    public bool ShowAdvancedRatingsDialog
-    {
-      get
-      {
-        return _showAdvancedRatingsDialogs;
-      }
-      set
-      {
-        // allow last saved setting to be available immediately
-        _showAdvancedRatingsDialogs = value;
+    //public bool ShowAdvancedRatingsDialog
+    //{
+    //  get
+    //  {
+    //    return _showAdvancedRatingsDialogs;
+    //  }
+    //  set
+    //  {
+    //    // allow last saved setting to be available immediately
+    //    _showAdvancedRatingsDialogs = value;
 
-        // sync setting - delay on startup
-        Thread syncSetting = new Thread(o =>
-        {
-          if (string.IsNullOrEmpty(Username) || string.IsNullOrEmpty(Password))
-            return;
+    //    // sync setting - delay on startup
+    //    Thread syncSetting = new Thread(o =>
+    //    {
+    //      if (string.IsNullOrEmpty(Username) || string.IsNullOrEmpty(Password))
+    //        return;
 
-          Thread.Sleep(5000);
-          TraktLogger.Info("Loading Online Settings");
+    //      Thread.Sleep(5000);
+    //      TraktLogger.Info("Loading Online Settings");
 
-          TraktAccountSettings settings = TraktAPI.GetAccountSettings();
-          if (settings != null && settings.Status == "success")
-          {
-            _showAdvancedRatingsDialogs = settings.ViewingSettings.RatingSettings.Mode == "advanced";
-          }
-          else
-          {
-            TraktLogger.Error("Failed to retrieve trakt settings online.");
-          }
-        })
-        {
-          IsBackground = true,
-          Name = "Settings"
-        };
-        syncSetting.Start();
-      }
-    }
-    bool _showAdvancedRatingsDialogs;
-
+    //      TraktAccountSettings settings = TraktAPI.GetAccountSettings();
+    //      if (settings != null && settings.Status == "success")
+    //      {
+    //        _showAdvancedRatingsDialogs = settings.ViewingSettings.RatingSettings.Mode == "advanced";
+    //      }
+    //      else
+    //      {
+    //        TraktLogger.Error("Failed to retrieve trakt settings online.");
+    //      }
+    //    })
+    //    {
+    //      IsBackground = true,
+    //      Name = "Settings"
+    //    };
+    //    syncSetting.Start();
+    //  }
+    //}
+    //bool _showAdvancedRatingsDialogs;
     /// <summary>
     /// Version of Plugin
     /// </summary>
     public static string Version
     {
-      get
-      {
-        return Assembly.GetCallingAssembly().GetName().Version.ToString();
-      }
+      get { return Assembly.GetCallingAssembly().GetName().Version.ToString(); }
     }
 
     /// <summary>
@@ -214,46 +212,39 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     /// </summary>
     public string UserAgent
     {
-      get
-      {
-        return string.Format("TraktForMediaPortal/{0}", Version);
-      }
+      get { return string.Format("TraktForMediaPortal/{0}", Version); }
     }
 
     /// <summary>
     /// The current connection status to trakt.tv
     /// </summary>
-    public ConnectionState AccountStatus
+    public static ConnectionState AccountStatus
     {
       get
       {
-        lock (_lockObject)
+        lock (lockObject)
         {
-          if (_accountStatus == ConnectionState.Pending)
+          if (_AccountStatus == ConnectionState.Pending)
           {
             // update state, to inform we are connecting now
-            _accountStatus = ConnectionState.Connecting;
+            _AccountStatus = ConnectionState.Connecting;
 
-            TraktLogger.Info("Signing into trakt.tv");
+            TraktLogger.Info("Logging into trakt.tv");
 
-            if (string.IsNullOrEmpty(TraktSettings.Username) || string.IsNullOrEmpty(TraktSettings.Password))
+            if (string.IsNullOrEmpty(Username) || string.IsNullOrEmpty(Password))
             {
-              TraktLogger.Info("Username and/or Password is empty in settings!");
+              TraktLogger.Info("Unable to login to trakt.tv, username and/or password is empty");
               return ConnectionState.Disconnected;
             }
 
-            // test connection
-            TraktAccount account = new TraktAccount
+            var response = TraktAPI.Login();
+            if (response != null && !string.IsNullOrEmpty(response.Token))
             {
-              Username = Username,
-              Password = Password
-            };
+              // set the user token for all future requests
+              TraktAPI.UserToken = response.Token;
 
-            TraktResponse response = TraktAPI.TestAccount(account);
-            if (response != null && response.Status == "success")
-            {
-              TraktLogger.Info("User {0} signed into trakt.", Username);
-              _accountStatus = ConnectionState.Connected;
+              TraktLogger.Info("User {0} successfully signed into trakt.tv", Username);
+              _AccountStatus = ConnectionState.Connected;
 
               if (!UserLogins.Exists(u => u.Username == Username))
               {
@@ -262,26 +253,99 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
             }
             else
             {
-              TraktLogger.Info("Username and/or Password is Invalid!");
-              _accountStatus = ConnectionState.Invalid;
+              // check the error code for the type of error retured
+              if (response != null && response.Description != null)
+              {
+                TraktLogger.Error("Login to trakt.tv failed, Code = '{0}', Reason = '{1}'", response.Code, response.Description);
+
+                switch (response.Code)
+                {
+                  case 401:
+                    _AccountStatus = ConnectionState.UnAuthorised;
+                    break;
+
+                  default:
+                    _AccountStatus = ConnectionState.Invalid;
+                    break;
+                }
+              }
+              else
+              {
+                // very unlikely to ever hit this condition since we should get some sort of protocol error
+                // if a problem with login or server error
+                _AccountStatus = ConnectionState.Invalid;
+              }
             }
           }
         }
-        return _accountStatus;
+        return _AccountStatus;
       }
       set
       {
-        lock (_lockObject)
+        lock (lockObject)
         {
-          _accountStatus = value;
+          _AccountStatus = value;
         }
       }
     }
-    ConnectionState _accountStatus = ConnectionState.Pending;
+
+    public static ConnectionState _AccountStatus = ConnectionState.Pending;
+
+    /// <summary>
+    /// Build Date of Plugin
+    /// </summary>
+    public static string BuildDate
+    {
+      get
+      {
+        if (_BuildDate == null)
+        {
+          const int PeHeaderOffset = 60;
+          const int LinkerTimestampOffset = 8;
+
+          byte[] buffer = new byte[2047];
+          using (Stream stream = new FileStream(Assembly.GetAssembly(typeof(TraktSettings)).Location, FileMode.Open, FileAccess.Read))
+          {
+            stream.Read(buffer, 0, 2047);
+          }
+
+          int secondsSince1970 = BitConverter.ToInt32(buffer, BitConverter.ToInt32(buffer, PeHeaderOffset) + LinkerTimestampOffset);
+
+          _BuildDate = new DateTime(1970, 1, 1, 0, 0, 0).AddSeconds(secondsSince1970).ToString("yyyy-MM-dd");
+        }
+        return _BuildDate;
+      }
+    }
+
+    private static string _BuildDate;
 
     #endregion
 
+    public static bool? IsConfiguration
+    {
+      get
+      {
+        if (_isConfiguration == null)
+        {
+          try
+          {
+            var entryAssembly = Assembly.GetEntryAssembly();
+
+            _isConfiguration = !Path.GetFileNameWithoutExtension(entryAssembly.Location).Equals("mediaportal", StringComparison.InvariantCultureIgnoreCase);
+          }
+          catch
+          {
+            _isConfiguration = false;
+          }
+        }
+        return _isConfiguration;
+      }
+    }
+
+    private static bool? _isConfiguration;
+
     #region Methods
+
     /// <summary>
     /// Loads the Settings
     /// </summary>

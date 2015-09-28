@@ -53,7 +53,7 @@ namespace MediaPortal.UiComponents.Trakt.Models
     public const string SERIES_BANNER_URL = "http://trakt.tv/user/{0}/widgets/watched/episode-thin-banner@2x.jpg";
     public const string MOVIES_BANNER_URL = "http://trakt.tv/user/{0}/widgets/watched/movie-thin-banner@2x.jpg";
 
-    public readonly static Guid TRAKT_SETUP_MODEL_ID = new Guid(TRAKT_SETUP_MODEL_ID_STR);
+    public static readonly Guid TRAKT_SETUP_MODEL_ID = new Guid(TRAKT_SETUP_MODEL_ID_STR);
 
     #endregion
 
@@ -221,23 +221,87 @@ namespace MediaPortal.UiComponents.Trakt.Models
           return false;
         }
         var movies = contentDirectory.Search(new MediaItemQuery(types, null, null), true);
-        TraktMovieSync syncData = new TraktMovieSync { UserName = Username, Password = Password, MovieList = new List<TraktMovieSync.Movie>() };
-        // First send all movies to Trakt that we have so they appear in library
-        foreach (var movie in movies)
-          syncData.MovieList.Add(ToMovie(movie));
 
-        TraktSyncModes traktSyncMode = TraktSyncModes.library;
-        var response = TraktAPI.SyncMovieLibrary(syncData, traktSyncMode);
-        ServiceRegistration.Get<ILogger>().Info("Trakt.tv: Movies '{0}': {1} inserted, {2} existing, {3} skipped movies.", traktSyncMode, response.Inserted, SafeCount(response.AlreadyExistMovies), SafeCount(response.SkippedMovies));
+        var syncCollectedMovies = movies.Select(movie => new TraktSyncMovieCollected
+        {
+          Ids = new TraktMovieId { Imdb = ToMovie(movie).Ids.Imdb, Tmdb = ToMovie(movie).Ids.Tmdb },
+          Title = ToMovie(movie).Title,
+          Year = ToMovie(movie).Year,
+          //TODO
+          //add "AudioChannels", "AudiCodec", etc...
+        }).ToList();
 
-        syncData.MovieList.Clear();
-        // Then send only the watched movies as "seen"
-        foreach (var movie in movies.Where(IsWatched))
-          syncData.MovieList.Add(ToMovie(movie));
+        if (syncCollectedMovies.Count > 0)
+        {
+          //update cache
+          TraktCache.AddMoviesToCollection(syncCollectedMovies);
+          int pageSize = Extensions.OnlineLibraries.Libraries.Trakt.TraktSettings.SyncBatchSize;
+          int pages = (int)Math.Ceiling((double)syncCollectedMovies.Count / pageSize);
+          for (int i = 0; i < pages; i++)
+          {
+            var pagedMovies = syncCollectedMovies.Skip(i * pageSize).Take(pageSize).ToList();
 
-        traktSyncMode = TraktSyncModes.seen;
-        response = TraktAPI.SyncMovieLibrary(syncData, traktSyncMode);
-        ServiceRegistration.Get<ILogger>().Info("Trakt.tv: Movies '{0}': {1} inserted, {2} existing, {3} skipped movies.", traktSyncMode, response.Inserted, SafeCount(response.AlreadyExistMovies), SafeCount(response.SkippedMovies));
+            // remove title/year such that match against online ID only
+            if (Extensions.OnlineLibraries.Libraries.Trakt.TraktSettings.SkipMoviesWithNoIdsOnSync)
+            {
+              pagedMovies.ForEach(m =>
+              {
+                m.Title = null;
+                m.Year = null;
+              });
+            }
+
+            var response = TraktAPI.AddMoviesToCollecton(new TraktSyncMoviesCollected { Movies = pagedMovies });
+
+            // remove movies from cache which didn't succeed
+            if (response != null && response.NotFound != null && response.NotFound.Movies.Count > 0)
+            {
+              TraktCache.RemoveMoviesFromCollection(response.NotFound.Movies);
+            }
+          }
+        }
+
+        // ServiceRegistration.Get<ILogger>().Info("Trakt.tv: Movies '{0}': {1} inserted, {2} existing, {3} skipped movies.", syncCollectedMovies, response.Inserted, SafeCount(response.AlreadyExistMovies), SafeCount(response.SkippedMovies));
+
+        var syncWatchedMovies = movies.Where(IsWatched).Select(movie => new TraktSyncMovieWatched
+        {
+          Ids = new TraktMovieId { Imdb = ToMovie(movie).Ids.Imdb, Tmdb = ToMovie(movie).Ids.Tmdb },
+          Title = ToMovie(movie).Title,
+          Year = ToMovie(movie).Year
+          // TODO
+          // add "watched add" 
+        }).ToList();
+
+        if (syncWatchedMovies.Count > 0)
+        {
+          // update internal cache
+          TraktCache.AddMoviesToWatchHistory(syncWatchedMovies);
+          int pageSize = Extensions.OnlineLibraries.Libraries.Trakt.TraktSettings.SyncBatchSize;
+          int pages = (int)Math.Ceiling((double)syncWatchedMovies.Count / pageSize);
+          for (int i = 0; i < pages; i++)
+          {
+            var pagedMovies = syncWatchedMovies.Skip(i * pageSize).Take(pageSize).ToList();
+            // remove title/year such that match against online ID only
+            if (Extensions.OnlineLibraries.Libraries.Trakt.TraktSettings.SkipMoviesWithNoIdsOnSync)
+            {
+              pagedMovies.ForEach(m =>
+              {
+                m.Title = null;
+                m.Year = null;
+              });
+            }
+
+            var response = TraktAPI.AddMoviesToWatchedHistory(new TraktSyncMoviesWatched { Movies = pagedMovies });
+
+            // remove movies from cache which didn't succeed
+            if (response != null && response.NotFound != null && response.NotFound.Movies.Count > 0)
+            {
+              TraktCache.RemoveMoviesFromWatchHistory(response.NotFound.Movies);
+            }
+          }
+        }
+
+        // ServiceRegistration.Get<ILogger>().Info("Trakt.tv: Movies '{0}': {1} inserted, {2} existing, {3} skipped movies.", traktSyncMode, response.Inserted, SafeCount(response.AlreadyExistMovies), SafeCount(response.SkippedMovies));
         return true;
       }
       catch (Exception ex)
@@ -358,24 +422,24 @@ namespace MediaPortal.UiComponents.Trakt.Models
       return list != null ? list.Count : 0;
     }
 
-    private TraktMovieSync.Movie ToMovie(MediaItem mediaItem)
+    private TraktMovie ToMovie(MediaItem mediaItem)
     {
       string value;
       int iValue;
-      DateTime dtValue;
+      int dtValue;
 
-      TraktMovieSync.Movie movie = new TraktMovieSync.Movie();
+      TraktMovie movie = new TraktMovie();
       if (MediaItemAspect.TryGetAttribute(mediaItem.Aspects, MovieAspect.ATTR_MOVIE_NAME, out value) && !string.IsNullOrWhiteSpace(value))
         movie.Title = value;
 
       if (MediaItemAspect.TryGetAttribute(mediaItem.Aspects, MovieAspect.ATTR_IMDB_ID, out value) && !string.IsNullOrWhiteSpace(value))
-        movie.IMDBID = value;
+        movie.Ids.Imdb = value;
 
       if (MediaItemAspect.TryGetAttribute(mediaItem.Aspects, MovieAspect.ATTR_TMDB_ID, out iValue) && iValue > 0)
-        movie.TMDBID = iValue.ToString();
+        movie.Ids.Tmdb = iValue;
 
       if (MediaItemAspect.TryGetAttribute(mediaItem.Aspects, MediaAspect.ATTR_RECORDINGTIME, out dtValue))
-        movie.Year = dtValue.Year.ToString();
+        movie.Year = dtValue;
 
       return movie;
     }
