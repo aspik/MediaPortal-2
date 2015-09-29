@@ -19,8 +19,6 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     public bool KeepTraktLibraryClean { get; set; }
     public List<String> BlockedFilenames { get; set; }
     public List<String> BlockedFolders { get; set; }
-    public SyncMovieCheck SkippedMovies { get; set; }
-    public SyncMovieCheck AlreadyExistMovies { get; set; }
     public static int LogLevel { get; set; }
     public int SyncTimerLength { get; set; }
     public int SyncStartDelay { get; set; }
@@ -67,12 +65,9 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     public bool ShowCommunityActivity { get; set; }
     public bool IncludeMeInFriendsActivity { get; set; }
     public TraktActivity LastActivityLoad { get; set; }
-    public IEnumerable<TraktTrendingMovie> LastTrendingMovies { get; set; }
-    public IEnumerable<TraktTrendingShow> LastTrendingShows { get; set; }
     public int DashboardActivityPollInterval { get; set; }
     public int DashboardTrendingPollInterval { get; set; }
     public int DashboardLoadDelay { get; set; }
-    public TraktUserProfile.Statistics LastStatistics { get; set; }
     public bool DashboardMovieTrendingActive { get; set; }
     public string MovieRecommendationGenre { get; set; }
     public bool MovieRecommendationHideCollected { get; set; }
@@ -84,6 +79,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     public bool ShowRecommendationHideWatchlisted { get; set; }
     public int ShowRecommendationStartYear { get; set; }
     public int ShowRecommendationEndYear { get; set; }
+    //commented because of missing SortBy class
     //public SortBy SortByTrendingMovies { get; set; }
     //public SortBy SortByRecommendedMovies { get; set; }
     //public SortBy SortByWatchListMovies { get; set; }
@@ -124,6 +120,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     #region Constants
 
+    // TODO replace fix paths
     //private string cLastActivityFileCache = Path.Combine(Config.GetFolder(Config.Dir.Config), @"Trakt\Dashboard\Activity.json");
     //private string cLastTrendingMovieFileCache = Path.Combine(Config.GetFolder(Config.Dir.Config), @"Trakt\Dashboard\TrendingMovies.json");
     //private string cLastTrendingShowFileCache = Path.Combine(Config.GetFolder(Config.Dir.Config), @"Trakt\Dashboard\TrendingShows.json");
@@ -157,48 +154,6 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     private static string _password = null;
 
-    /// <summary>
-    /// Show Advanced or Simple Ratings Dialog
-    /// Settings is Synced from Server
-    /// </summary>
-    //public bool ShowAdvancedRatingsDialog
-    //{
-    //  get
-    //  {
-    //    return _showAdvancedRatingsDialogs;
-    //  }
-    //  set
-    //  {
-    //    // allow last saved setting to be available immediately
-    //    _showAdvancedRatingsDialogs = value;
-
-    //    // sync setting - delay on startup
-    //    Thread syncSetting = new Thread(o =>
-    //    {
-    //      if (string.IsNullOrEmpty(Username) || string.IsNullOrEmpty(Password))
-    //        return;
-
-    //      Thread.Sleep(5000);
-    //      TraktLogger.Info("Loading Online Settings");
-
-    //      TraktAccountSettings settings = TraktAPI.GetAccountSettings();
-    //      if (settings != null && settings.Status == "success")
-    //      {
-    //        _showAdvancedRatingsDialogs = settings.ViewingSettings.RatingSettings.Mode == "advanced";
-    //      }
-    //      else
-    //      {
-    //        TraktLogger.Error("Failed to retrieve trakt settings online.");
-    //      }
-    //    })
-    //    {
-    //      IsBackground = true,
-    //      Name = "Settings"
-    //    };
-    //    syncSetting.Start();
-    //  }
-    //}
-    //bool _showAdvancedRatingsDialogs;
     /// <summary>
     /// Version of Plugin
     /// </summary>
@@ -355,6 +310,8 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // initialise API settings
       TraktAPI.UserAgent = UserAgent;
+
+      // TODO fix settings?
 
       //using (Settings xmlreader = new MPSettings())
       //{

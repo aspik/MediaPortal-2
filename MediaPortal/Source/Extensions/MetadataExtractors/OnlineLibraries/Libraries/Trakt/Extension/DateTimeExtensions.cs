@@ -73,6 +73,9 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Extension
     /// <summary>
     /// Returns the corresponding Olsen timezone e.g. 'Atlantic/Canary' into a Windows timezone e.g. 'GMT Standard Time'
     /// </summary>
+
+    //commented because of missing Resources class
+
     //public static string OlsenToWindowsTimezone(this string olsenTimezone)
     //{
     //  if (olsenTimezone == null)

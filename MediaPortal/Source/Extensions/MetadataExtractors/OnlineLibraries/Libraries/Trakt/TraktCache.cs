@@ -14,6 +14,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     private static Object syncLists = new object();
     private static Object syncLastActivities = new object();
 
+    // TODO replace paths with real ones
     private static string MoviesWatchlistedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Movies\\Watchlisted.json");
     private static string MoviesRecommendedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Movies\\Recommended.json");
     private static string MoviesCollectedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Movies\\Collected.json");

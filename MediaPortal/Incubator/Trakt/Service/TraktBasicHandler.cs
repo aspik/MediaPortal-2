@@ -115,6 +115,9 @@ namespace MediaPortal.UiComponents.Trakt.Service
     ///// <summary>
     ///// Gets the Progress of the current video being played
     ///// </summary>
+    
+    // MP1 specific
+
     //internal static double GetPlayerProgress(VideoInfo videoInfo)
     //{
     //    // get duration/position in minutes
@@ -281,6 +284,8 @@ namespace MediaPortal.UiComponents.Trakt.Service
     /// Shows the Rate Dialog after playback has ended
     /// </summary>
     /// <param name="episode">The item being rated</param>
+    
+    // contains MP1 specific GUI parts
     //internal static void ShowRateDialog(VideoInfo videoInfo)
     //{
     //    if (!TraktSettings.ShowRateDialogOnWatched) return;     // not enabled            
