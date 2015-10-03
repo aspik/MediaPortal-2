@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
+using MediaPortal.Common;
+using MediaPortal.Common.Logging;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.DataStructures;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Extension;
 
@@ -10,10 +12,6 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 {
   public static class TraktLogger
   {
-    private static Object lockObject = new object();
-    //private static string latencyFilename = Config.GetFile(Config.Dir.Log, "TraktPlugin-Latencies.csv");
-    //private static string logFilename = Config.GetFile(Config.Dir.Log, "TraktPlugin.log");
-    //private static string logFilePattern = Config.GetFile(Config.Dir.Log, "TraktPlugin.{0}.log");
 
     internal delegate void OnLogReceivedDelegate(string message, bool error);
 
@@ -24,41 +22,6 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       // default logging before we load settings
       TraktSettings.LogLevel = 2;
 
-      #region Log Rollover
-
-      // get max number of log files to create
-      int maxLogFiles = 5;
-
-      // delete legacy backup
-      //DeleteFile(Config.GetFile(Config.Dir.Log, "TraktPlugin.bak"));
-
-      //// delete oldest log file if it exists
-      //string newLogFile = string.Empty;
-      //string oldLogFile = string.Format(logFilePattern, maxLogFiles);
-      //DeleteFile(oldLogFile);
-
-      //// move the other older log files up one slot
-      //for (int i = maxLogFiles - 1; i > 0; i--)
-      //{
-      //    oldLogFile = string.Format(logFilePattern, i);
-      //    newLogFile = string.Format(logFilePattern, i + 1);
-      //    MoveFile(oldLogFile, newLogFile);
-      //}
-
-      //// move the most recent log file up into the backup slots
-      //newLogFile = string.Format(logFilePattern, 1);
-      //MoveFile(logFilename, newLogFile);
-
-      #endregion
-
-      #region Latency Rollover
-
-      #endregion
-
-      // write latency header
-      //if (!File.Exists(latencyFilename))
-      //    CreateLatencyHeader();
-
       // listen to webclient events from the TraktAPI so we can provide useful logging            
       TraktAPI.OnDataSend += new TraktAPI.OnDataSendDelegate(TraktAPI_OnDataSend);
       TraktAPI.OnDataError += new TraktAPI.OnDataErrorDelegate(TraktAPI_OnDataError);
@@ -66,54 +29,54 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       TraktAPI.OnLatency += new TraktAPI.OnLatencyDelegate(TraktAPI_OnLatency);
     }
 
-    internal static void Info(String log)
+    public static void Info(String log)
     {
       // log to configuration window
       if (TraktSettings.IsConfiguration == true)
         OnLogReceived(log, false);
-
+     
       if (TraktSettings.LogLevel >= 2)
-        WriteToFile(String.Format(CreatePrefix(), "INFO", log));
+        ServiceRegistration.Get<ILogger>().Info("INFO", log);
     }
 
-    internal static void Info(String format, params Object[] args)
+    public static void Info(String format, params Object[] args)
     {
       Info(String.Format(format, args));
     }
 
-    internal static void Debug(String log)
+    public static void Debug(String log)
     {
       if (TraktSettings.LogLevel >= 3)
-        WriteToFile(String.Format(CreatePrefix(), "DEBG", log));
+        ServiceRegistration.Get<ILogger>().Info("DEBUG", log);
     }
 
-    internal static void Debug(String format, params Object[] args)
+    public static void Debug(String format, params Object[] args)
     {
       Debug(String.Format(format, args));
     }
 
-    internal static void Error(String log)
+    public static void Error(String log)
     {
       // log to configuration window
       if (TraktSettings.IsConfiguration == true)
         OnLogReceived(log, true);
 
       if (TraktSettings.LogLevel >= 0)
-        WriteToFile(String.Format(CreatePrefix(), "ERR ", log));
+        ServiceRegistration.Get<ILogger>().Info("ERROR", log);
     }
 
-    internal static void Error(String format, params Object[] args)
+    public static void Error(String format, params Object[] args)
     {
       Error(String.Format(format, args));
     }
 
-    internal static void Warning(String log)
+    public static void Warning(String log)
     {
       if (TraktSettings.LogLevel >= 1)
-        WriteToFile(String.Format(CreatePrefix(), "WARN", log));
+        ServiceRegistration.Get<ILogger>().Info("WARN", log);
     }
 
-    internal static void Warning(String format, params Object[] args)
+    public static void Warning(String format, params Object[] args)
     {
       Warning(String.Format(format, args));
     }
@@ -121,73 +84,6 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     private static String CreatePrefix()
     {
       return DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " [{0}] " + String.Format("[{0}][{1}]", Thread.CurrentThread.Name, Thread.CurrentThread.ManagedThreadId.ToString().PadLeft(2, '0')) + ": {1}";
-    }
-
-    private static void CreateLatencyHeader()
-    {
-      string header = "TimeStamp (UTC),Absolute Path,Query,Method,Status Code,Status Description,Data Sent (Bytes),Data Received (Bytes),Server Execution Time (ms),Total Time Taken (ms)";
-      WriteLatency(header);
-    }
-
-    private static void DeleteFile(String log)
-    {
-      if (File.Exists(log))
-      {
-        try
-        {
-          File.Delete(log);
-        }
-        catch
-        {
-        }
-      }
-    }
-
-    private static void MoveFile(String oldlog, String newLog)
-    {
-      if (File.Exists(oldlog))
-      {
-        // Move to next backup slot
-        try
-        {
-          File.Move(oldlog, newLog);
-        }
-        catch
-        {
-        }
-      }
-    }
-
-    private static void WriteToFile(String log)
-    {
-      try
-      {
-        lock (lockObject)
-        {
-          //StreamWriter sw = File.AppendText(logFilename);
-          //sw.WriteLine(log);
-          //sw.Close();
-        }
-      }
-      catch
-      {
-      }
-    }
-
-    private static void WriteLatency(String latency)
-    {
-      try
-      {
-        //lock (lockObject)
-        //{
-        //    StreamWriter sw = File.AppendText(latencyFilename);
-        //    sw.WriteLine(latency);
-        //    sw.Close();
-        //}
-      }
-      catch
-      {
-      }
     }
 
     private static void TraktAPI_OnDataSend(string address, string data)

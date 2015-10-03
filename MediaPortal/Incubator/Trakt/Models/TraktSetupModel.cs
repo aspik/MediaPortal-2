@@ -222,6 +222,7 @@ namespace MediaPortal.UiComponents.Trakt.Models
         }
         var movies = contentDirectory.Search(new MediaItemQuery(types, null, null), true);
 
+        TraktLogger.Info("Finding movies to add to trakt.tv collection");
         var syncCollectedMovies = movies.Select(movie => new TraktSyncMovieCollected
         {
           Ids = new TraktMovieId { Imdb = ToMovie(movie).Ids.Imdb, Tmdb = ToMovie(movie).Ids.Tmdb },
@@ -231,6 +232,8 @@ namespace MediaPortal.UiComponents.Trakt.Models
           //add "AudioChannels", "AudiCodec", etc...
         }).ToList();
 
+        TraktLogger.Info("Adding {0} movies to trakt.tv watched history", syncCollectedMovies.Count);
+
         if (syncCollectedMovies.Count > 0)
         {
           //update cache
@@ -239,7 +242,13 @@ namespace MediaPortal.UiComponents.Trakt.Models
           int pages = (int)Math.Ceiling((double)syncCollectedMovies.Count / pageSize);
           for (int i = 0; i < pages; i++)
           {
+            TraktLogger.Info("Adding movies [{0}/{1}] to trakt.tv collection", i + 1, pages);
+
             var pagedMovies = syncCollectedMovies.Skip(i * pageSize).Take(pageSize).ToList();
+
+            pagedMovies.ForEach(s => TraktLogger.Info("Adding movie to trakt.tv collection. Title = '{0}', Year = '{1}', IMDb ID = '{2}', TMDb ID = '{3}', Date Added = '{4}', MediaType = '{5}', Resolution = '{6}', Audio Codec = '{7}', Audio Channels = '{8}'",
+                                            s.Title, s.Year.HasValue ? s.Year.ToString() : "<empty>", s.Ids.Imdb ?? "<empty>", s.Ids.Tmdb.HasValue ? s.Ids.Tmdb.ToString() : "<empty>",
+                                            s.CollectedAt, s.MediaType ?? "<empty>", s.Resolution ?? "<empty>", s.AudioCodec ?? "<empty>", s.AudioChannels ?? "<empty>"));
 
             // remove title/year such that match against online ID only
             if (Extensions.OnlineLibraries.Libraries.Trakt.TraktSettings.SkipMoviesWithNoIdsOnSync)
@@ -252,6 +261,7 @@ namespace MediaPortal.UiComponents.Trakt.Models
             }
 
             var response = TraktAPI.AddMoviesToCollecton(new TraktSyncMoviesCollected { Movies = pagedMovies });
+            TraktLogger.LogTraktResponse(response);
 
             // remove movies from cache which didn't succeed
             if (response != null && response.NotFound != null && response.NotFound.Movies.Count > 0)
@@ -260,8 +270,6 @@ namespace MediaPortal.UiComponents.Trakt.Models
             }
           }
         }
-
-        // ServiceRegistration.Get<ILogger>().Info("Trakt.tv: Movies '{0}': {1} inserted, {2} existing, {3} skipped movies.", syncCollectedMovies, response.Inserted, SafeCount(response.AlreadyExistMovies), SafeCount(response.SkippedMovies));
 
         var syncWatchedMovies = movies.Where(IsWatched).Select(movie => new TraktSyncMovieWatched
         {
@@ -280,7 +288,13 @@ namespace MediaPortal.UiComponents.Trakt.Models
           int pages = (int)Math.Ceiling((double)syncWatchedMovies.Count / pageSize);
           for (int i = 0; i < pages; i++)
           {
+            TraktLogger.Info("Adding movies [{0}/{1}] to trakt.tv watched history", i + 1, pages);
+
             var pagedMovies = syncWatchedMovies.Skip(i * pageSize).Take(pageSize).ToList();
+
+            pagedMovies.ForEach(s => TraktLogger.Info("Adding movie to trakt.tv watched history. Title = '{0}', Year = '{1}', IMDb ID = '{2}', TMDb ID = '{3}', Date Watched = '{4}'",
+                                                                             s.Title, s.Year.HasValue ? s.Year.ToString() : "<empty>", s.Ids.Imdb ?? "<empty>", s.Ids.Tmdb.HasValue ? s.Ids.Tmdb.ToString() : "<empty>", s.WatchedAt));
+
             // remove title/year such that match against online ID only
             if (Extensions.OnlineLibraries.Libraries.Trakt.TraktSettings.SkipMoviesWithNoIdsOnSync)
             {
@@ -293,6 +307,8 @@ namespace MediaPortal.UiComponents.Trakt.Models
 
             var response = TraktAPI.AddMoviesToWatchedHistory(new TraktSyncMoviesWatched { Movies = pagedMovies });
 
+            TraktLogger.LogTraktResponse<TraktSyncResponse>(response);
+
             // remove movies from cache which didn't succeed
             if (response != null && response.NotFound != null && response.NotFound.Movies.Count > 0)
             {
@@ -300,8 +316,6 @@ namespace MediaPortal.UiComponents.Trakt.Models
             }
           }
         }
-
-        // ServiceRegistration.Get<ILogger>().Info("Trakt.tv: Movies '{0}': {1} inserted, {2} existing, {3} skipped movies.", traktSyncMode, response.Inserted, SafeCount(response.AlreadyExistMovies), SafeCount(response.SkippedMovies));
         return true;
       }
       catch (Exception ex)
