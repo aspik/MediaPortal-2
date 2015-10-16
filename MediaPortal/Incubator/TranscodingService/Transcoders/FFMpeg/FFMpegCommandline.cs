@@ -36,6 +36,7 @@ using MediaPortal.Common.ResourceAccess;
 using MediaPortal.Plugins.Transcoding.Service.Transcoders.Base;
 using MediaPortal.Plugins.Transcoding.Service.Transcoders.Base.Metadata;
 using MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg.Converters;
+using MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg.Encoders;
 
 namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
 {
@@ -56,140 +57,6 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
       {"'", @"\'"},
       {"[", @"\["},
       {"]", @"\]"}
-    };
-    private readonly Dictionary<EncodingProfile, string> IntelMpeg2EncodingProfiles = new Dictionary<EncodingProfile, string>()
-    {
-      { EncodingProfile.Simple, "-profile:v simple" },
-      { EncodingProfile.Main, "-profile:v main" },
-      { EncodingProfile.High, "-profile:v high" }
-    };
-    private readonly Dictionary<EncodingPreset, string> IntelMpeg2EncodingPresets = new Dictionary<EncodingPreset, string>()
-    {
-      { EncodingPreset.Default, "-preset fast" },
-      { EncodingPreset.Ultrafast, "-preset fast" },
-      { EncodingPreset.Superfast, "-preset fast" },
-      { EncodingPreset.Veryfast, "-preset fast" },
-      { EncodingPreset.Faster, "-preset fast" },
-      { EncodingPreset.Fast, "-preset fast" },
-      { EncodingPreset.Medium, "-preset medium" },
-      { EncodingPreset.Slow, "-preset slow" },
-      { EncodingPreset.Slower, "-preset slow" },
-      { EncodingPreset.Veryslow, "-preset slow" }
-    };
-    private readonly Dictionary<EncodingProfile, string> SWH264EncodingProfiles = new Dictionary<EncodingProfile, string>()
-    {
-      { EncodingProfile.Baseline, "-profile:v baseline" },
-      { EncodingProfile.Main, "-profile:v main" },
-      { EncodingProfile.High, "-profile:v high" },
-      { EncodingProfile.High422, "-profile:v high422" },
-      { EncodingProfile.High444, "-profile:v high444" }
-    };
-    private readonly Dictionary<EncodingProfile, string> IntelH264EncodingProfiles = new Dictionary<EncodingProfile, string>()
-    {
-      { EncodingProfile.Baseline, "-profile:v baseline" },
-      { EncodingProfile.Main, "-profile:v main" },
-      { EncodingProfile.High, "-profile:v high" },
-      { EncodingProfile.High422, "-profile:v high" },
-      { EncodingProfile.High444, "-profile:v high" }
-    };
-    private readonly Dictionary<EncodingProfile, string> NvidiaH264EncodingProfiles = new Dictionary<EncodingProfile, string>()
-    {
-      { EncodingProfile.Baseline, "-profile:v baseline" },
-      { EncodingProfile.Main, "-profile:v main" },
-      { EncodingProfile.High, "-profile:v high" },
-      { EncodingProfile.High422, "-profile:v high" },
-      { EncodingProfile.High444, "-profile:v high" }
-    };
-    private readonly Dictionary<EncodingProfile, string> SWH265EncodingProfiles = new Dictionary<EncodingProfile, string>()
-    {
-    };
-    private readonly Dictionary<EncodingProfile, string> IntelH265EncodingProfiles = new Dictionary<EncodingProfile, string>()
-    {
-      { EncodingProfile.Main, "-profile:v main" },
-      { EncodingProfile.Main10, "-profile:v main10" }
-    };
-    private readonly Dictionary<EncodingProfile, string> NvidiaH265EncodingProfiles = new Dictionary<EncodingProfile, string>()
-    {
-    };
-    private readonly Dictionary<EncodingPreset, string> SWH264EncodingPresets = new Dictionary<EncodingPreset, string>()
-    {
-      { EncodingPreset.Default, "-preset veryfast" },
-      { EncodingPreset.Ultrafast, "-preset ultrafast" },
-      { EncodingPreset.Superfast, "-preset superfast" },
-      { EncodingPreset.Veryfast, "-preset veryfast" },
-      { EncodingPreset.Faster, "-preset faster" },
-      { EncodingPreset.Fast, "-preset fast" },
-      { EncodingPreset.Medium, "-preset medium" },
-      { EncodingPreset.Slow, "-preset slow" },
-      { EncodingPreset.Slower, "-preset slower" },
-      { EncodingPreset.Veryslow, "-preset veryslow" },
-      { EncodingPreset.Placebo, "-preset placebo" }
-    };
-    private readonly Dictionary<EncodingPreset, string> IntelH264EncodingPresets = new Dictionary<EncodingPreset, string>()
-    {
-      { EncodingPreset.Default, "-preset veryfast" },
-      { EncodingPreset.Ultrafast, "-preset veryfast" },
-      { EncodingPreset.Superfast, "-preset veryfast" },
-      { EncodingPreset.Veryfast, "-preset veryfast" },
-      { EncodingPreset.Faster, "-preset faster" },
-      { EncodingPreset.Fast, "-preset fast" },
-      { EncodingPreset.Medium, "-preset medium" },
-      { EncodingPreset.Slow, "-preset slow" },
-      { EncodingPreset.Slower, "-preset slower" },
-      { EncodingPreset.Veryslow, "-preset veryslow" }
-    };
-    private readonly Dictionary<EncodingPreset, string> NvidiaH264EncodingPresets = new Dictionary<EncodingPreset, string>()
-    {
-      { EncodingPreset.Default, "-preset hp" },
-      { EncodingPreset.Ultrafast, "-preset hp" },
-      { EncodingPreset.Superfast, "-preset hp" },
-      { EncodingPreset.Veryfast, "-preset hp" },
-      { EncodingPreset.Faster, "-preset hp" },
-      { EncodingPreset.Fast, "-preset fast" },
-      { EncodingPreset.Medium, "-preset medium" },
-      { EncodingPreset.Slow, "-preset slow" },
-      { EncodingPreset.Slower, "-preset hq" },
-      { EncodingPreset.Veryslow, "-preset hq" }
-    };
-    private readonly Dictionary<EncodingPreset, string> SWH265EncodingPresets = new Dictionary<EncodingPreset, string>()
-    {
-      { EncodingPreset.Default, "-preset veryfast" },
-      { EncodingPreset.Ultrafast, "-preset ultrafast" },
-      { EncodingPreset.Superfast, "-preset superfast" },
-      { EncodingPreset.Veryfast, "-preset veryfast" },
-      { EncodingPreset.Faster, "-preset faster" },
-      { EncodingPreset.Fast, "-preset fast" },
-      { EncodingPreset.Medium, "-preset medium" },
-      { EncodingPreset.Slow, "-preset slow" },
-      { EncodingPreset.Slower, "-preset slower" },
-      { EncodingPreset.Veryslow, "-preset veryslow" },
-      { EncodingPreset.Placebo, "-preset placebo" }
-    };
-    private readonly Dictionary<EncodingPreset, string> IntelH265EncodingPresets = new Dictionary<EncodingPreset, string>()
-    {
-      { EncodingPreset.Default, "-preset fast" },
-      { EncodingPreset.Ultrafast, "-preset fast" },
-      { EncodingPreset.Superfast, "-preset fast" },
-      { EncodingPreset.Veryfast, "-preset fast" },
-      { EncodingPreset.Faster, "-preset fast" },
-      { EncodingPreset.Fast, "-preset fast" },
-      { EncodingPreset.Medium, "-preset medium" },
-      { EncodingPreset.Slow, "-preset slow" },
-      { EncodingPreset.Slower, "-preset slow" },
-      { EncodingPreset.Veryslow, "-preset slow" }
-    };
-    private readonly Dictionary<EncodingPreset, string> NvidiaH265EncodingPresets = new Dictionary<EncodingPreset, string>()
-    {
-      { EncodingPreset.Default, "-preset hp" },
-      { EncodingPreset.Ultrafast, "-preset hp" },
-      { EncodingPreset.Superfast, "-preset hp" },
-      { EncodingPreset.Veryfast, "-preset hp" },
-      { EncodingPreset.Faster, "-preset hp" },
-      { EncodingPreset.Fast, "-preset fast" },
-      { EncodingPreset.Medium, "-preset medium" },
-      { EncodingPreset.Slow, "-preset slow" },
-      { EncodingPreset.Slower, "-preset hq" },
-      { EncodingPreset.Veryslow, "-preset hq" }
     };
     private readonly Dictionary<QualityMode, string> VideoQualityModes = new Dictionary<QualityMode, string>()
     {
@@ -231,7 +98,7 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
       _transcoderCachePath = mediaConverter.TranscoderCachePath;
       _hlsSegmentTimeInSeconds = mediaConverter.HLSSegmentTimeInSeconds;
       _hlsSegmentFileTemplate = mediaConverter.HLSSegmentFileTemplate;
-      _supportHardcodedSubs = mediaConverter._supportHardcodedSubs;
+      _supportHardcodedSubs = mediaConverter.SupportHardcodedSubs;
     }
 
     internal void InitTranscodingParameters(IResourceAccessor sourceFile, ref FFMpegTranscodeData data)
@@ -271,23 +138,18 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
           Directory.CreateDirectory(pathName);
         }
         data.WorkPath = pathName;
-        data.SegmentPlaylist = "playlist.m3u8";
-
-        //Segment muxer
-        //data.OutputArguments.Add(string.Format("-f {0}", GetVideoContainer(video.TargetVideoContainer)));
-        //data.OutputArguments.Add(string.Format("-segment_format {0}", GetVideoContainer(VideoContainer.Mpeg2Ts)));
-        //data.OutputArguments.Add(string.Format("-segment_time {0}", HLSSegmentTimeInSeconds));
-        //data.OutputArguments.Add("-segment_list_flags live");
-        //data.OutputArguments.Add("-segment_list_type hls");
-        //data.OutputArguments.Add("-segment_list_size 0");
-        //data.OutputArguments.Add(string.Format("-segment_list {0}", "\"" + data.SegmentPlaylist + "\""));
-        //data.OutputFilePath = HLSSegmentFileTemplate;
+        data.SegmentPlaylist = Path.Combine(pathName, "playlist.m3u8");
+        data.HlsBaseUrl = video.HlsBaseUrl;
+        string fileSegments = Path.Combine(pathName, _hlsSegmentFileTemplate);
 
         //HLS muxer
         data.OutputArguments.Add("-hls_list_size 0");
         data.OutputArguments.Add("-hls_allow_cache 0");
         data.OutputArguments.Add(string.Format("-hls_time {0}", _hlsSegmentTimeInSeconds));
-        data.OutputArguments.Add(string.Format("-hls_segment_filename {0}", "\"" + _hlsSegmentFileTemplate + "\""));
+        data.OutputArguments.Add(string.Format("-hls_segment_filename {0}", "\"" + fileSegments + "\""));
+        data.OutputArguments.Add("-segment_list_flags +live");
+        if (data.HlsBaseUrl != null)
+          data.OutputArguments.Add(string.Format("-hls_base_url {0}", "\"" + data.HlsBaseUrl + "\""));
         data.OutputFilePath = data.SegmentPlaylist;
       }
       else
@@ -464,6 +326,50 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
       }
       else
       {
+        if (audio.TargetAudioCodec == AudioCodec.Unknown)
+        {
+          switch (audio.TargetAudioContainer)
+          {
+            case AudioContainer.Unknown:
+              break;
+            case AudioContainer.Ac3:
+              audio.TargetAudioCodec = AudioCodec.Ac3;
+              break;
+            case AudioContainer.Adts:
+              audio.TargetAudioCodec = AudioCodec.Aac;
+              break;
+            case AudioContainer.Asf:
+              audio.TargetAudioCodec = AudioCodec.Wma;
+              break;
+            case AudioContainer.Flac:
+              audio.TargetAudioCodec = AudioCodec.Flac;
+              break;
+            case AudioContainer.Lpcm:
+              audio.TargetAudioCodec = AudioCodec.Lpcm;
+              break;
+            case AudioContainer.Mp4:
+              audio.TargetAudioCodec = AudioCodec.Aac;
+              break;
+            case AudioContainer.Mp3:
+              audio.TargetAudioCodec = AudioCodec.Mp3;
+              break;
+            case AudioContainer.Mp2:
+              audio.TargetAudioCodec = AudioCodec.Mp2;
+              break;
+            case AudioContainer.Ogg:
+              audio.TargetAudioCodec = AudioCodec.Vorbis;
+              break;
+            case AudioContainer.Rtp:
+              audio.TargetAudioCodec = AudioCodec.Lpcm;
+              break;
+            case AudioContainer.Rtsp:
+              audio.TargetAudioCodec = AudioCodec.Lpcm;
+              break;
+            default:
+              audio.TargetAudioCodec = audio.SourceAudioCodec;
+              break;
+          }
+        }
         data.OutputArguments.Add(string.Format("-c:a {0}", FFMpegGetAudioCodec.GetAudioCodec(audio.TargetAudioCodec)));
         long frequency = Validators.GetAudioFrequency(audio.SourceAudioCodec, audio.TargetAudioCodec, audio.SourceAudioFrequency, audio.TargetAudioFrequency);
         if (frequency > 0)
@@ -528,7 +434,7 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
       }
     }
 
-    internal void AddVideoParameters(VideoTranscoding video, string transcodeId, Subtitle subtitle, ref FFMpegTranscodeData data, ref List<string> intelTranscodes, ref List<string> nvidiaTranscodes)
+    internal void AddVideoParameters(VideoTranscoding video, string transcodeId, Subtitle subtitle, FFMpegEncoderConfig encoderConfig, ref FFMpegTranscodeData data)
     {
       if (video.TargetVideoCodec == VideoCodec.Unknown)
       {
@@ -553,8 +459,6 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
       {
         video.TargetVideoMaxHeight = 1080;
       }
-      bool isIntel = Checks.IsIntelHWTranscode(video.TranscodeId, intelTranscodes);
-      bool isNvidia = Checks.IsNvidiaHWTranscode(video.TranscodeId, nvidiaTranscodes);
       bool vCodecCopy = false;
       if (Checks.IsVideoStreamChanged(video, _supportHardcodedSubs) == false)
       {
@@ -564,7 +468,7 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
       }
       else
       {
-        data.OutputArguments.Add(string.Format("-c:v {0}", FFMpegGetVideoCodec.GetVideoCodec(video.TargetVideoCodec, transcodeId, intelTranscodes, nvidiaTranscodes)));
+        data.OutputArguments.Add(string.Format("-c:v {0}", FFMpegGetVideoCodec.GetVideoCodec(video.TargetVideoCodec, data.Encoder)));
 
         if (video.TargetPixelFormat == PixelFormat.Unknown)
         {
@@ -574,43 +478,23 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
 
         if (video.TargetVideoCodec == VideoCodec.H265)
         {
-          string profile = null;
-          if (isIntel)
-          {
-            IntelH265EncodingProfiles.TryGetValue(video.TargetProfile, out profile);
-          }
-          else if (isNvidia)
-          {
-            NvidiaH265EncodingProfiles.TryGetValue(video.TargetProfile, out profile);
-          }
-          else
-          {
-            SWH265EncodingProfiles.TryGetValue(video.TargetProfile, out profile);
-          }
+          string profile = encoderConfig.GetEncoderProfile(video.TargetVideoCodec, video.TargetProfile);
           if (string.IsNullOrEmpty(profile) == false)
           {
             data.OutputArguments.Add(profile);
           }
+          if (video.TargetLevel > 0)
+          {
+            data.OutputArguments.Add(string.Format("-level {0}", video.TargetLevel.ToString("0.0", CultureInfo.InvariantCulture)));
+          }
 
-          string preset = null;
-          if (isIntel)
-          {
-            IntelH265EncodingPresets.TryGetValue(video.TargetPreset, out preset);
-          }
-          else if (isNvidia)
-          {
-            NvidiaH265EncodingPresets.TryGetValue(video.TargetPreset, out preset);
-          }
-          else
-          {
-            SWH265EncodingPresets.TryGetValue(video.TargetPreset, out preset);
-          }
+          string preset = encoderConfig.GetEncoderPreset(video.TargetVideoCodec, video.TargetPreset);
           if (string.IsNullOrEmpty(preset) == false)
           {
             data.OutputArguments.Add(preset);
           }
 
-          AddVideoBitrateParameters(video, ref data, ref nvidiaTranscodes);
+          AddVideoBitrateParameters(video, ref data);
 
           string quality = null;
           VideoQualityModes.TryGetValue(video.TargetVideoQuality, out quality);
@@ -623,7 +507,7 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
             data.OutputArguments.Add(string.Format("-crf {0}", quality));
           }
 
-          if (!isIntel && !isNvidia)
+          if (data.Encoder == EncoderHandler.Software)
           {
             data.OutputArguments.Add("-x265-params");
             string args = "";
@@ -657,48 +541,23 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
             video.TargetProfile = EncodingProfile.High444;
           }
 
-          string profile = null;
-          if (isIntel)
-          {
-            IntelH264EncodingProfiles.TryGetValue(video.TargetProfile, out profile);
-          }
-          else if (isNvidia)
-          {
-            NvidiaH264EncodingProfiles.TryGetValue(video.TargetProfile, out profile);
-          }
-          else
-          {
-            SWH264EncodingProfiles.TryGetValue(video.TargetProfile, out profile);
-          }
+          string profile = encoderConfig.GetEncoderProfile(video.TargetVideoCodec, video.TargetProfile);
           if (string.IsNullOrEmpty(profile) == false)
           {
             data.OutputArguments.Add(profile);
           }
-
           if (video.TargetLevel > 0)
           {
             data.OutputArguments.Add(string.Format("-level {0}", video.TargetLevel.ToString("0.0", CultureInfo.InvariantCulture)));
           }
 
-          string preset = null;
-          if (isIntel)
-          {
-            IntelH264EncodingPresets.TryGetValue(video.TargetPreset, out preset);
-          }
-          else if (isNvidia)
-          {
-            NvidiaH264EncodingPresets.TryGetValue(video.TargetPreset, out preset);
-          }
-          else
-          {
-            SWH264EncodingPresets.TryGetValue(video.TargetPreset, out preset);
-          }
+          string preset = encoderConfig.GetEncoderPreset(video.TargetVideoCodec, video.TargetPreset);
           if (string.IsNullOrEmpty(preset) == false)
           {
             data.OutputArguments.Add(preset);
           }
 
-          AddVideoBitrateParameters(video, ref data, ref nvidiaTranscodes);
+          AddVideoBitrateParameters(video, ref data);
 
           string quality = null;
           VideoQualityModes.TryGetValue(video.TargetVideoQuality, out quality);
@@ -713,26 +572,19 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
         }
         else
         {
-          if (video.TargetVideoCodec == VideoCodec.Mpeg2)
+          string profile = encoderConfig.GetEncoderProfile(video.TargetVideoCodec, video.TargetProfile);
+          if (string.IsNullOrEmpty(profile) == false)
           {
-            if (isIntel)
-            {
-              string profile = null;
-              IntelMpeg2EncodingProfiles.TryGetValue(video.TargetProfile, out profile);
-              if (string.IsNullOrEmpty(profile) == false)
-              {
-                data.OutputArguments.Add(profile);
-              }
-
-              string preset = null;
-              IntelMpeg2EncodingPresets.TryGetValue(video.TargetPreset, out preset);
-              if (string.IsNullOrEmpty(preset) == false)
-              {
-                data.OutputArguments.Add(preset);
-              }
-            }
+            data.OutputArguments.Add(profile);
           }
-          if (AddVideoBitrateParameters(video, ref data, ref nvidiaTranscodes) == false)
+
+          string preset = encoderConfig.GetEncoderPreset(video.TargetVideoCodec, video.TargetPreset);
+          if (string.IsNullOrEmpty(preset) == false)
+          {
+            data.OutputArguments.Add(preset);
+          }
+
+          if (AddVideoBitrateParameters(video, ref data) == false)
           {
             string scale = null;
             VideoScaleModes.TryGetValue(video.TargetVideoQuality, out scale);
@@ -776,13 +628,13 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
       }
     }
 
-    private bool AddVideoBitrateParameters(VideoTranscoding video, ref FFMpegTranscodeData data, ref List<string> nvidiaTranscodes)
+    private bool AddVideoBitrateParameters(VideoTranscoding video, ref FFMpegTranscodeData data)
     {
       if (video.TargetVideoBitrate > 0)
       {
         if (video.TargetVideoCodec == VideoCodec.H264 || video.TargetVideoCodec == VideoCodec.H265)
         {
-          if (Checks.IsNvidiaHWTranscode(video.TranscodeId, nvidiaTranscodes))
+          if (data.Encoder == EncoderHandler.HardwareNvidia)
           {
             data.OutputArguments.Add("-cbr 1");
           }
@@ -895,6 +747,19 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
       if (channels > 0)
       {
         data.OutputArguments.Add(string.Format("-ac {0}", channels));
+      }
+    }
+
+    internal void AddTimeParameters(double timeStart, double timeDuration, double mediaDuration, ref FFMpegTranscodeData data)
+    {
+      if (timeStart > 0.0 && (timeStart < mediaDuration || mediaDuration <= 0))
+      {
+        data.InputArguments.Add(string.Format(CultureInfo.InvariantCulture, "-ss {0:0.0}", timeStart));
+        data.OutputArguments.Add("-avoid_negative_ts 1");
+      }
+      if (timeDuration > 0)
+      {
+        data.OutputArguments.Add(string.Format(CultureInfo.InvariantCulture, "-t {0:0.0}", timeDuration));
       }
     }
 

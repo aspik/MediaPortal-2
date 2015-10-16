@@ -22,8 +22,12 @@
 
 #endregion
 
+using MediaPortal.Common;
+using MediaPortal.Common.ResourceAccess;
 using System;
 using System.Drawing;
+using System.Globalization;
+using System.IO;
 
 
 namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.Base.Metadata
@@ -82,8 +86,56 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.Base.Metadata
         TargetAudioContainer = audio.TargetAudioContainer,
         TargetAudioFrequency = audio.TargetAudioFrequency
       };
+      if (audio.TargetAudioContainer == AudioContainer.Unknown)
+      {
+        metadata.TargetAudioContainer = audio.SourceAudioContainer;
+      }
       if (Checks.IsAudioStreamChanged(audio))
       {
+        if (audio.TargetAudioCodec == AudioCodec.Unknown)
+        {
+          switch (audio.TargetAudioContainer)
+          {
+            case AudioContainer.Unknown:
+              break;
+            case AudioContainer.Ac3:
+              metadata.TargetAudioCodec = AudioCodec.Ac3;
+              break;
+            case AudioContainer.Adts:
+              metadata.TargetAudioCodec = AudioCodec.Aac;
+              break;
+            case AudioContainer.Asf:
+              metadata.TargetAudioCodec = AudioCodec.Wma;
+              break;
+            case AudioContainer.Flac:
+              metadata.TargetAudioCodec = AudioCodec.Flac;
+              break;
+            case AudioContainer.Lpcm:
+              metadata.TargetAudioCodec = AudioCodec.Lpcm;
+              break;
+            case AudioContainer.Mp4:
+              metadata.TargetAudioCodec = AudioCodec.Aac;
+              break;
+            case AudioContainer.Mp3:
+              metadata.TargetAudioCodec = AudioCodec.Mp3;
+              break;
+            case AudioContainer.Mp2:
+              metadata.TargetAudioCodec = AudioCodec.Mp2;
+              break;
+            case AudioContainer.Ogg:
+              metadata.TargetAudioCodec = AudioCodec.Vorbis;
+              break;
+            case AudioContainer.Rtp:
+              metadata.TargetAudioCodec = AudioCodec.Lpcm;
+              break;
+            case AudioContainer.Rtsp:
+              metadata.TargetAudioCodec = AudioCodec.Lpcm;
+              break;
+            default:
+              metadata.TargetAudioCodec = audio.SourceAudioCodec;
+              break;
+          }
+        }
         long frequency = Validators.GetAudioFrequency(audio.SourceAudioCodec, audio.TargetAudioCodec, audio.SourceAudioFrequency, audio.TargetAudioFrequency);
         if (frequency > 0)
         {
@@ -232,7 +284,58 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.Base.Metadata
       {
         metadata.TargetAudioBitrate = Validators.GetAudioBitrate(video.SourceAudioBitrate, video.TargetAudioBitrate);
       }
+      if (video.TargetSubtitleSupport == SubtitleSupport.SoftCoded)
+      {
+        if (video.SourceSubtitles.Count > 0)
+        {
+          metadata.TargetSubtitled = true;
+        }
+        else
+        {
+          metadata.TargetSubtitled = IsExternalSubtitleAvaialable(video);
+        }
+      }
       return metadata;
+    }
+
+    private bool IsExternalSubtitleAvaialable(VideoTranscoding video)
+    {
+      if (video.SourceFile is ILocalFsResourceAccessor)
+      {
+        ILocalFsResourceAccessor lfsra = (ILocalFsResourceAccessor)video.SourceFile;
+        if (lfsra.Exists)
+        {
+          // Impersonation
+          using (ServiceRegistration.Get<IImpersonationService>().CheckImpersonationFor(lfsra.CanonicalLocalResourcePath))
+          {
+            string[] files = Directory.GetFiles(Path.GetDirectoryName(lfsra.LocalFileSystemPath), Path.GetFileNameWithoutExtension(lfsra.LocalFileSystemPath) + "*.*");
+            foreach (string file in files)
+            {
+              if (string.Compare(Path.GetExtension(file), ".srt", true, CultureInfo.InvariantCulture) == 0)
+              {
+                return true;
+              }
+              else if (string.Compare(Path.GetExtension(file), ".smi", true, CultureInfo.InvariantCulture) == 0)
+              {
+                return true;
+              }
+              else if (string.Compare(Path.GetExtension(file), ".ass", true, CultureInfo.InvariantCulture) == 0)
+              {
+                return true;
+              }
+              else if (string.Compare(Path.GetExtension(file), ".ssa", true, CultureInfo.InvariantCulture) == 0)
+              {
+                return true;
+              }
+              else if (string.Compare(Path.GetExtension(file), ".sub", true, CultureInfo.InvariantCulture) == 0)
+              {
+                return true;
+              }
+            }
+          }
+        }
+      }
+      return false;
     }
   }
 }

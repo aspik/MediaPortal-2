@@ -217,6 +217,13 @@ namespace MediaPortal.Plugins.Transcoding.Service
     Valid
   }
 
+  public enum EncoderHandler
+  {
+    Software,
+    HardwareIntel,
+    HardwareNvidia
+  }
+
   #endregion
 
   #region Classes
@@ -250,7 +257,8 @@ namespace MediaPortal.Plugins.Transcoding.Service
     public float SourceFrameRate = -1;
     public int SourceVideoHeight = -1;
     public int SourceVideoWidth = -1;
-    public SubtitleStream SourceSubtitle = null;
+    public bool SourceSubtitleAvailable = false;
+    public List<SubtitleStream> SourceSubtitles = new List<SubtitleStream>();
 
     //Target info
     public VideoContainer TargetVideoContainer = VideoContainer.Unknown;
@@ -273,7 +281,9 @@ namespace MediaPortal.Plugins.Transcoding.Service
     public bool TargetForceAudioStereo = false;
     public SubtitleSupport TargetSubtitleSupport = SubtitleSupport.None;
     public SubtitleCodec TargetSubtitleCodec = SubtitleCodec.Srt;
+    public string TargetSubtitleLanguages = "EN";
     public string Movflags = null;
+    public string HlsBaseUrl = null;
   }
 
   public class ImageTranscoding : BaseTranscoding
@@ -334,6 +344,7 @@ namespace MediaPortal.Plugins.Transcoding.Service
     public float TargetLevel = -1;
     public float TargetVideoFrameRate = -1;
     public Timestamp TargetVideoTimestamp = Timestamp.None;
+    public bool TargetSubtitled = false;
   }
 
   public class TranscodedImageMetadata

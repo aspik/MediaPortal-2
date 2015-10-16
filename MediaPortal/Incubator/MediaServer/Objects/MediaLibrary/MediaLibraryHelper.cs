@@ -30,7 +30,8 @@ using MediaPortal.Common.MediaManagement;
 using MediaPortal.Common.MediaManagement.DefaultItemAspects;
 using MediaPortal.Extensions.MediaServer.Objects.Basic;
 using MediaPortal.Extensions.MediaServer.Tree;
-using MediaPortal.Extensions.MediaServer.Aspects;
+using MediaPortal.Extensions.MediaServer.DLNA;
+using MediaPortal.Plugins.Transcoding.Aspects;
 
 namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
 {
@@ -71,9 +72,9 @@ namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
                                    AudioAspect.ASPECT_ID,
                                    ImageAspect.ASPECT_ID,
                                    VideoAspect.ASPECT_ID,
-                                   DlnaItemAudioAspect.ASPECT_ID,
-                                   DlnaItemImageAspect.ASPECT_ID,
-                                   DlnaItemVideoAspect.ASPECT_ID,
+                                   TranscodeItemAudioAspect.ASPECT_ID,
+                                   TranscodeItemImageAspect.ASPECT_ID,
+                                   TranscodeItemVideoAspect.ASPECT_ID,
                                  };
 
       return library.GetMediaItem(id, necessaryMIATypeIDs, optionalMIATypeIDs);
@@ -88,29 +89,38 @@ namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
     {
       IDirectoryObject obj;
       // Choose the appropiate MediaLibrary* object for the media item
-      if (item.Aspects.ContainsKey(DirectoryAspect.ASPECT_ID))
+      try
       {
-        if (baseKey == null) baseKey = CONTAINER_ROOT_KEY;
-        obj = new MediaLibraryContainer(baseKey, item, parent.Client);
+        if (item.Aspects.ContainsKey(DirectoryAspect.ASPECT_ID))
+        {
+          if (baseKey == null) baseKey = CONTAINER_ROOT_KEY;
+          obj = new MediaLibraryContainer(baseKey, item, parent.Client);
+        }
+        else if (item.Aspects.ContainsKey(AudioAspect.ASPECT_ID))
+        {
+          if (baseKey == null) baseKey = CONTAINER_AUDIO_KEY;
+          obj = new MediaLibraryMusicTrack(baseKey, item, parent.Client);
+        }
+        else if (item.Aspects.ContainsKey(ImageAspect.ASPECT_ID))
+        {
+          if (baseKey == null) baseKey = CONTAINER_IMAGES_KEY;
+          obj = new MediaLibraryImageItem(baseKey, item, parent.Client);
+        }
+        else if (item.Aspects.ContainsKey(VideoAspect.ASPECT_ID))
+        {
+          if (baseKey == null) baseKey = CONTAINER_VIDEO_KEY;
+          obj = new MediaLibraryVideoItem(baseKey, item, parent.Client);
+        }
+        else
+        {
+          Logger.Warn("MediaServer item {0} {1} contains no valid aspects", item.MediaItemId, title);
+          return null;
+        }
       }
-      else if (item.Aspects.ContainsKey(AudioAspect.ASPECT_ID))
+      catch (DlnaAspectMissingException e)
       {
-        if (baseKey == null) baseKey = CONTAINER_AUDIO_KEY;
-        obj = new MediaLibraryMusicTrack(baseKey, item, parent.Client);
-      }
-      else if (item.Aspects.ContainsKey(ImageAspect.ASPECT_ID))
-      {
-        if (baseKey == null) baseKey = CONTAINER_IMAGES_KEY;
-        obj = new MediaLibraryImageItem(baseKey, item, parent.Client);
-      }
-      else if (item.Aspects.ContainsKey(VideoAspect.ASPECT_ID))
-      {
-        if (baseKey == null) baseKey = CONTAINER_VIDEO_KEY;
-        obj = new MediaLibraryVideoItem(baseKey, item, parent.Client);
-      }
-      else
-      {
-        Logger.Warn("MediaServer item {0} {1} contains no valid aspects", item.MediaItemId, title);
+        //Unable to create DlnaItem
+        Logger.Warn(e.Message);
         return null;
       }
       //Logger.Debug("MediaServer converted {0}:[{1}] into {2}", item.MediaItemId, string.Join(",", item.Aspects.Keys), obj.GetType().Name);

@@ -37,13 +37,13 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg.Converters
         case AudioCodec.Mp2:
           return "mp2";
         case AudioCodec.Aac:
-          return "libfdk_aac";
+          return "libvo_aacenc";
         case AudioCodec.Ac3:
           return "ac3";
         case AudioCodec.Lpcm:
           return "pcm_s16le";
         case AudioCodec.Dts:
-          return "dca -strict -2";
+          return "dca";
         case AudioCodec.Wma:
           return "wmav1";
         case AudioCodec.Flac:
