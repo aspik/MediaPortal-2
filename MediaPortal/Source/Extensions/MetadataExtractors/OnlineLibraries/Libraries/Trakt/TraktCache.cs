@@ -3300,7 +3300,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       _WatchListEpisodes = watchlistEpisodes;
     }
 
-    internal static void AddEpisodesToCollection(TraktSyncShowCollectedEx show)
+    public static void AddEpisodesToCollection(TraktSyncShowCollectedEx show)
     {
       var collectedEpisodes = (_CollectedEpisodes ?? new List<EpisodeCollected>()).ToList();
       var episodesToAdd = new List<EpisodeCollected>();
