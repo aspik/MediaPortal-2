@@ -22,8 +22,9 @@
 
 #endregion
 
+using System;
+using System.Reflection;
 using MediaPortal.Common.Settings;
-using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.DataStructures;
 
 namespace MediaPortal.UiComponents.Trakt.Settings
 {
@@ -33,6 +34,20 @@ namespace MediaPortal.UiComponents.Trakt.Settings
     public bool EnableTrakt { get; set; }
 
     [Setting(SettingScope.User)]
-    public TraktAuthentication Authentication { get; set; }
+    public string Username { get; set; }
+
+    [Setting(SettingScope.User)]
+    public string Password { get; set; }
+
+    [Setting(SettingScope.User)]
+    public bool UseSSL { get; set; }
+
+    [Setting(SettingScope.User)]
+    public bool KeepTraktLibraryClean { get; set; }
+
+
+
+    //[Setting(SettingScope.User)]
+    //public TraktAuthentication Authentication { get; set; }
   }
 }
