@@ -4,51 +4,61 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
+using MediaPortal.Common;
+using MediaPortal.Common.PathManager;
+using MediaPortal.Common.Settings;
+using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.DataStructures;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Extension;
+using MediaPortal.UiComponents.Trakt.Settings;
 
-namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
+namespace MediaPortal.UiComponents.Trakt
 {
   public static class TraktCache
   {
     private static Object syncLists = new object();
     private static Object syncLastActivities = new object();
 
-    // TODO replace paths with real ones
-    private static string MoviesWatchlistedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Movies\\Watchlisted.json");
-    private static string MoviesRecommendedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Movies\\Recommended.json");
-    private static string MoviesCollectedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Movies\\Collected.json");
-    private static string MoviesWatchedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Movies\\Watched.json");
-    private static string MoviesRatedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Movies\\Rated.json");
-    private static string MoviesCommentedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Movies\\Commented.json");
-    private static string MoviesPausedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Movies\\Paused.json");
 
-    private static string EpisodesWatchlistedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Episodes\\Watchlisted.json");
-    private static string EpisodesCollectedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Episodes\\Collected.json");
-    private static string EpisodesWatchedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Episodes\\Watched.json");
-    private static string EpisodesRatedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Episodes\\Rated.json");
-    private static string EpisodesCommentedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Episodes\\Commented.json");
-    private static string EpisodesPausedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Episodes\\Paused.json");
+    public static string CACHE_PATH = ServiceRegistration.Get<IPathManager>().GetPath(@"<DATA>\Trakt\");
+    private static TraktSettings TRAKT_SETTINGS = ServiceRegistration.Get<ISettingsManager>().Load<TraktSettings>();
 
-    private static string ShowsWatchlistedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Shows\\Watchlisted.json");
-    private static string ShowsRatedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Shows\\Rated.json");
-    private static string ShowsCommentedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Shows\\Commented.json");
+    private static string MoviesWatchlistedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Movies\Watchlisted.json");
+    private static string MoviesRecommendedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Movies\Recommended.json");
+    private static string MoviesCollectedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Movies\Collected.json");
+    private static string MoviesWatchedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Movies\Watched.json");
+    private static string MoviesRatedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Movies\Rated.json");
+    private static string MoviesCommentedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Movies\Commented.json");
+    private static string MoviesPausedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Movies\Paused.json");
 
-    private static string SeasonsWatchlistedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Seasons\\Watchlisted.json");
-    private static string SeasonsRatedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Seasons\\Rated.json");
-    private static string SeasonsCommentedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Seasons\\Commented.json");
+    private static string EpisodesWatchlistedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Episodes\Watchlisted.json");
+    private static string EpisodesCollectedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Episodes\Collected.json");
+    private static string EpisodesWatchedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Episodes\Watched.json");
+    private static string EpisodesRatedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Episodes\Rated.json");
+    private static string EpisodesCommentedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Episodes\Commented.json");
+    private static string EpisodesPausedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Episodes\Paused.json");
 
-    private static string CustomListsFile = Path.Combine("c:\\temp", "Trakt\\Library\\Lists\\Menu.json");
-    private static string CustomListFile = Path.Combine("c:\\temp", "Trakt\\Library\\Lists\\{listname}.json");
-    private static string CustomListCommentedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Lists\\Commented.json");
-    private static string CustomListLikedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Lists\\Liked.json");
+    private static string ShowsWatchlistedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Shows\Watchlisted.json");
+    private static string ShowsRatedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Shows\Rated.json");
+    private static string ShowsCommentedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Shows\Commented.json");
 
-    private static string CommentsLikedFile = Path.Combine("c:\\temp", "Trakt\\Library\\Comments\\Liked.json");
+    private static string SeasonsWatchlistedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Seasons\Watchlisted.json");
+    private static string SeasonsRatedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Seasons\Rated.json");
+    private static string SeasonsCommentedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Seasons\Commented.json");
+
+    private static string CustomListsFile = Path.Combine(CACHE_PATH, @"{username}\Library\Lists\Menu.json");
+    private static string CustomListFile = Path.Combine(CACHE_PATH, @"{username}\Library\Lists\{listname}.json");
+    private static string CustomListCommentedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Lists\Commented.json");
+    private static string CustomListLikedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Lists\Liked.json");
+
+    private static string CommentsLikedFile = Path.Combine(CACHE_PATH, @"{username}\Library\Comments\Liked.json");
 
     private static DateTime MovieRecommendationsAge;
     private static DateTime CustomListAge;
 
     private static DateTime LastFollowerRequest = new DateTime();
+
+    
 
     #region Sync
 
@@ -62,7 +72,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     {
       try
       {
-        TraktLogger.Info("Started refresh of tv show user data from trakt.tv");
+        TraktLogger.Info("Started reuesh of tv show user data from trakt.tv");
 
         // clear the last time(s) we did anything online
         ClearLastActivityCache();
@@ -195,14 +205,14 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Movies.Watched == TraktSettings.LastSyncActivities.Movies.Watched)
+      if (lastSyncActivities.Movies.Watched == TRAKT_SETTINGS.LastSyncActivities.Movies.Watched)
       {
         var cachedItems = WatchedMovies;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("Movie watched history cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Movies.Watched ?? "<empty>", lastSyncActivities.Movies.Watched ?? "<empty>");
+      TraktLogger.Info("Movie watched history cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Movies.Watched ?? "<empty>", lastSyncActivities.Movies.Watched ?? "<empty>");
 
       // we get from online, local cache is not up to date
       var onlineItems = TraktAPI.GetWatchedMovies();
@@ -215,7 +225,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       SaveFileCache(MoviesWatchedFile, _WatchedMovies.ToJSON());
 
       // save new activity time for next time
-      TraktSettings.LastSyncActivities.Movies.Watched = lastSyncActivities.Movies.Watched;
+      TRAKT_SETTINGS.LastSyncActivities.Movies.Watched = lastSyncActivities.Movies.Watched;
 
       return onlineItems;
     }
@@ -259,14 +269,14 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Movies.Collection == TraktSettings.LastSyncActivities.Movies.Collection)
+      if (lastSyncActivities.Movies.Collection == TRAKT_SETTINGS.LastSyncActivities.Movies.Collection)
       {
         var cachedItems = CollectedMovies;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("Movie collection cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Movies.Collection ?? "<empty>", lastSyncActivities.Movies.Collection ?? "<empty>");
+      TraktLogger.Info("Movie collection cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Movies.Collection ?? "<empty>", lastSyncActivities.Movies.Collection ?? "<empty>");
 
       // we get from online, local cache is not up to date
       var onlineItems = TraktAPI.GetCollectedMovies();
@@ -279,7 +289,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       SaveFileCache(MoviesCollectedFile, _CollectedMovies.ToJSON());
 
       // save new activity time for next time
-      TraktSettings.LastSyncActivities.Movies.Collection = lastSyncActivities.Movies.Collection;
+      TRAKT_SETTINGS.LastSyncActivities.Movies.Collection = lastSyncActivities.Movies.Collection;
 
       return onlineItems;
     }
@@ -323,14 +333,14 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Movies.Rating == TraktSettings.LastSyncActivities.Movies.Rating)
+      if (lastSyncActivities.Movies.Rating == TRAKT_SETTINGS.LastSyncActivities.Movies.Rating)
       {
         var cachedItems = RatedMovies;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("Movie ratings cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Movies.Rating ?? "<empty>", lastSyncActivities.Movies.Rating ?? "<empty>");
+      TraktLogger.Info("Movie ratings cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Movies.Rating ?? "<empty>", lastSyncActivities.Movies.Rating ?? "<empty>");
 
       // we get from online, local cache is not up to date
       var onlineItems = TraktAPI.GetRatedMovies();
@@ -343,7 +353,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       SaveFileCache(MoviesRatedFile, _RatedMovies.ToJSON());
 
       // save new activity time for next time
-      TraktSettings.LastSyncActivities.Movies.Rating = lastSyncActivities.Movies.Rating;
+      TRAKT_SETTINGS.LastSyncActivities.Movies.Rating = lastSyncActivities.Movies.Rating;
 
       return onlineItems;
     }
@@ -391,14 +401,14 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Episodes.Collection == TraktSettings.LastSyncActivities.Episodes.Collection)
+      if (lastSyncActivities.Episodes.Collection == TRAKT_SETTINGS.LastSyncActivities.Episodes.Collection)
       {
         var cachedItems = CollectedEpisodes;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("TV episode collection cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Episodes.Collection ?? "<empty>", lastSyncActivities.Episodes.Collection ?? "<empty>");
+      TraktLogger.Info("TV episode collection cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Episodes.Collection ?? "<empty>", lastSyncActivities.Episodes.Collection ?? "<empty>");
 
       // we get from online, local cache is not up to date
       var onlineItems = TraktAPI.GetCollectedEpisodes();
@@ -435,7 +445,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       SaveFileCache(EpisodesCollectedFile, _CollectedEpisodes.ToJSON());
 
       // save new activity time for next time
-      TraktSettings.LastSyncActivities.Episodes.Collection = lastSyncActivities.Episodes.Collection;
+      TRAKT_SETTINGS.LastSyncActivities.Episodes.Collection = lastSyncActivities.Episodes.Collection;
 
       return _CollectedEpisodes;
     }
@@ -479,14 +489,14 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Episodes.Watched == TraktSettings.LastSyncActivities.Episodes.Watched)
+      if (lastSyncActivities.Episodes.Watched == TRAKT_SETTINGS.LastSyncActivities.Episodes.Watched)
       {
         var cachedItems = WatchedEpisodes;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("TV episode watched history cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Episodes.Watched ?? "<empty>", lastSyncActivities.Episodes.Watched ?? "<empty>");
+      TraktLogger.Info("TV episode watched history cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Episodes.Watched ?? "<empty>", lastSyncActivities.Episodes.Watched ?? "<empty>");
 
       // we get from online, local cache is not up to date
       var onlineItems = TraktAPI.GetWatchedEpisodes();
@@ -524,7 +534,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       SaveFileCache(EpisodesWatchedFile, _WatchedEpisodes.ToJSON());
 
       // save new activity time for next time
-      TraktSettings.LastSyncActivities.Episodes.Watched = lastSyncActivities.Episodes.Watched;
+      TRAKT_SETTINGS.LastSyncActivities.Episodes.Watched = lastSyncActivities.Episodes.Watched;
 
       return _WatchedEpisodes;
     }
@@ -624,14 +634,14 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Episodes.Rating == TraktSettings.LastSyncActivities.Episodes.Rating)
+      if (lastSyncActivities.Episodes.Rating == TRAKT_SETTINGS.LastSyncActivities.Episodes.Rating)
       {
         var cachedItems = RatedEpisodes;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("TV episode ratings cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Episodes.Rating ?? "<empty>", lastSyncActivities.Episodes.Rating ?? "<empty>");
+      TraktLogger.Info("TV episode ratings cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Episodes.Rating ?? "<empty>", lastSyncActivities.Episodes.Rating ?? "<empty>");
 
       // we get from online, local cache is not up to date
       var onlineItems = TraktAPI.GetRatedEpisodes();
@@ -643,7 +653,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         SaveFileCache(EpisodesRatedFile, _RatedEpisodes.ToJSON());
 
         // save new activity time for next time
-        TraktSettings.LastSyncActivities.Episodes.Rating = lastSyncActivities.Episodes.Rating;
+        TRAKT_SETTINGS.LastSyncActivities.Episodes.Rating = lastSyncActivities.Episodes.Rating;
       }
 
       return onlineItems;
@@ -692,14 +702,14 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Seasons.Rating == TraktSettings.LastSyncActivities.Seasons.Rating)
+      if (lastSyncActivities.Seasons.Rating == TRAKT_SETTINGS.LastSyncActivities.Seasons.Rating)
       {
         var cachedItems = RatedSeasons;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("TV season ratings cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Seasons.Rating ?? "<empty>", lastSyncActivities.Seasons.Rating ?? "<empty>");
+      TraktLogger.Info("TV season ratings cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Seasons.Rating ?? "<empty>", lastSyncActivities.Seasons.Rating ?? "<empty>");
 
       // we get from online, local cache is not up to date
       var onlineItems = TraktAPI.GetRatedSeasons();
@@ -711,7 +721,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         SaveFileCache(SeasonsRatedFile, _RatedSeasons.ToJSON());
 
         // save new activity time for next time
-        TraktSettings.LastSyncActivities.Seasons.Rating = lastSyncActivities.Seasons.Rating;
+        TRAKT_SETTINGS.LastSyncActivities.Seasons.Rating = lastSyncActivities.Seasons.Rating;
       }
 
       return onlineItems;
@@ -760,14 +770,14 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Shows.Rating == TraktSettings.LastSyncActivities.Shows.Rating)
+      if (lastSyncActivities.Shows.Rating == TRAKT_SETTINGS.LastSyncActivities.Shows.Rating)
       {
         var cachedItems = RatedShows;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("TV show ratings cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Shows.Rating ?? "<empty>", lastSyncActivities.Shows.Rating ?? "<empty>");
+      TraktLogger.Info("TV show ratings cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Shows.Rating ?? "<empty>", lastSyncActivities.Shows.Rating ?? "<empty>");
 
       // we get from online, local cache is not up to date
       var onlineItems = TraktAPI.GetRatedShows();
@@ -779,7 +789,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         SaveFileCache(ShowsRatedFile, _RatedShows.ToJSON());
 
         // save new activity time for next time
-        TraktSettings.LastSyncActivities.Shows.Rating = lastSyncActivities.Shows.Rating;
+        TRAKT_SETTINGS.LastSyncActivities.Shows.Rating = lastSyncActivities.Shows.Rating;
       }
 
       return onlineItems;
@@ -829,17 +839,17 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
         // check the last time we have against the online time
         // if the times are the same try to load from cache
-        if (lastSyncActivities.Movies.Watchlist == TraktSettings.LastSyncActivities.Movies.Watchlist)
+        if (lastSyncActivities.Movies.Watchlist == TRAKT_SETTINGS.LastSyncActivities.Movies.Watchlist)
         {
           var cachedItems = WatchListMovies;
           if (cachedItems != null)
             return cachedItems;
         }
 
-        TraktLogger.Info("Movie watchlist cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Movies.Watchlist ?? "<empty>", lastSyncActivities.Movies.Watchlist ?? "<empty>");
+        TraktLogger.Info("Movie watchlist cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Movies.Watchlist ?? "<empty>", lastSyncActivities.Movies.Watchlist ?? "<empty>");
 
         // we get from online, local cache is not up to date
-        var onlineItems = TraktAPI.GetWatchListMovies(TraktSettings.Username);
+        var onlineItems = TraktAPI.GetWatchListMovies(TRAKT_SETTINGS.Username);
         if (onlineItems != null)
         {
           _WatchListMovies = onlineItems;
@@ -848,7 +858,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
           SaveFileCache(MoviesWatchlistedFile, _WatchListMovies.ToJSON());
 
           // save new activity time for next time
-          TraktSettings.LastSyncActivities.Movies.Watchlist = lastSyncActivities.Movies.Watchlist;
+          TRAKT_SETTINGS.LastSyncActivities.Movies.Watchlist = lastSyncActivities.Movies.Watchlist;
         }
         return onlineItems;
       }
@@ -876,7 +886,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       {
         // check the last time we have retrieved the watchlist
         // if the time is recent, try to load from cache
-        if (_RecommendedMovies != null && (DateTime.Now - MovieRecommendationsAge) > TimeSpan.FromMinutes(TraktSettings.WebRequestCacheMinutes))
+        if (_RecommendedMovies != null && (DateTime.Now - MovieRecommendationsAge) > TimeSpan.FromMinutes(TRAKT_SETTINGS.WebRequestCacheMinutes))
         {
           var cachedItems = RecommendedMovies;
           if (cachedItems != null)
@@ -943,17 +953,17 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
         // check the last time we have against the online time
         // if the times are the same try to load from cache
-        if (lastSyncActivities.Shows.Watchlist == TraktSettings.LastSyncActivities.Shows.Watchlist)
+        if (lastSyncActivities.Shows.Watchlist ==  TRAKT_SETTINGS.LastSyncActivities.Shows.Watchlist)
         {
           var cachedItems = WatchListShows;
           if (cachedItems != null)
             return cachedItems;
         }
 
-        TraktLogger.Info("TV show watchlist cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Shows.Watchlist ?? "<empty>", lastSyncActivities.Shows.Watchlist ?? "<empty>");
+        TraktLogger.Info("TV show watchlist cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Shows.Watchlist ?? "<empty>", lastSyncActivities.Shows.Watchlist ?? "<empty>");
 
         // we get from online, local cache is not up to date
-        var onlineItems = TraktAPI.GetWatchListShows(TraktSettings.Username);
+        var onlineItems = TraktAPI.GetWatchListShows(TRAKT_SETTINGS.Username);
         if (onlineItems == null)
           return null;
 
@@ -963,7 +973,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         SaveFileCache(ShowsWatchlistedFile, _WatchListShows.ToJSON());
 
         // save new activity time for next time
-        TraktSettings.LastSyncActivities.Shows.Watchlist = lastSyncActivities.Shows.Watchlist;
+        TRAKT_SETTINGS.LastSyncActivities.Shows.Watchlist = lastSyncActivities.Shows.Watchlist;
 
         return onlineItems;
       }
@@ -1014,17 +1024,17 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
         // check the last time we have against the online time
         // if the times are the same try to load from cache
-        if (lastSyncActivities.Seasons.Watchlist == TraktSettings.LastSyncActivities.Seasons.Watchlist)
+        if (lastSyncActivities.Seasons.Watchlist == TRAKT_SETTINGS.LastSyncActivities.Seasons.Watchlist)
         {
           var cachedItems = WatchListSeasons;
           if (cachedItems != null)
             return cachedItems;
         }
 
-        TraktLogger.Info("TV seasons watchlist cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Seasons.Watchlist ?? "<empty>", lastSyncActivities.Seasons.Watchlist ?? "<empty>");
+        TraktLogger.Info("TV seasons watchlist cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Seasons.Watchlist ?? "<empty>", lastSyncActivities.Seasons.Watchlist ?? "<empty>");
 
         // we get from online, local cache is not up to date
-        var onlineItems = TraktAPI.GetWatchListSeasons(TraktSettings.Username);
+        var onlineItems = TraktAPI.GetWatchListSeasons(TRAKT_SETTINGS.Username);
         if (onlineItems == null)
           return null;
 
@@ -1034,7 +1044,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         SaveFileCache(SeasonsWatchlistedFile, _WatchListSeasons.ToJSON());
 
         // save new activity time for next time
-        TraktSettings.LastSyncActivities.Seasons.Watchlist = lastSyncActivities.Seasons.Watchlist;
+        TRAKT_SETTINGS.LastSyncActivities.Seasons.Watchlist = lastSyncActivities.Seasons.Watchlist;
 
         return onlineItems;
       }
@@ -1074,7 +1084,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         if (ignoreLastSyncTime)
           return WatchListEpisodes;
 
-        TraktLogger.Info("Getting current user watchlisted episodes from trakt.tv", TraktSettings.Username);
+        TraktLogger.Info("Getting current user watchlisted episodes from trakt.tv", TRAKT_SETTINGS.Username);
 
         // get the last time we did anything to our library online
         var lastSyncActivities = LastSyncActivities;
@@ -1085,17 +1095,17 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
         // check the last time we have against the online time
         // if the times are the same try to load from cache
-        if (lastSyncActivities.Episodes.Watchlist == TraktSettings.LastSyncActivities.Episodes.Watchlist)
+        if (lastSyncActivities.Episodes.Watchlist == TRAKT_SETTINGS.LastSyncActivities.Episodes.Watchlist)
         {
           var cachedItems = WatchListEpisodes;
           if (cachedItems != null)
             return cachedItems;
         }
 
-        TraktLogger.Info("TV episode watchlist cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Episodes.Watchlist ?? "<empty>", lastSyncActivities.Episodes.Watchlist ?? "<empty>");
+        TraktLogger.Info("TV episode watchlist cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Episodes.Watchlist ?? "<empty>", lastSyncActivities.Episodes.Watchlist ?? "<empty>");
 
         // we get from online, local cache is not up to date
-        var onlineItems = TraktAPI.GetWatchListEpisodes(TraktSettings.Username);
+        var onlineItems = TraktAPI.GetWatchListEpisodes(TRAKT_SETTINGS.Username);
         if (onlineItems == null)
           return null;
 
@@ -1105,7 +1115,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         SaveFileCache(EpisodesWatchlistedFile, _WatchListEpisodes.ToJSON());
 
         // save new activity time for next time
-        TraktSettings.LastSyncActivities.Episodes.Watchlist = lastSyncActivities.Episodes.Watchlist;
+        TRAKT_SETTINGS.LastSyncActivities.Episodes.Watchlist = lastSyncActivities.Episodes.Watchlist;
 
         return onlineItems;
       }
@@ -1168,7 +1178,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Lists.UpdatedAt == TraktSettings.LastSyncActivities.Lists.UpdatedAt)
+      if (lastSyncActivities.Lists.UpdatedAt == TRAKT_SETTINGS.LastSyncActivities.Lists.UpdatedAt)
       {
         TraktLogger.Info("Getting current user custom lists from local cache");
         var cachedItems = CustomLists;
@@ -1176,10 +1186,10 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
           return cachedItems;
       }
 
-      TraktLogger.Info("Custom Lists cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Lists.UpdatedAt ?? "<empty>", lastSyncActivities.Lists.UpdatedAt ?? "<empty>");
+      TraktLogger.Info("Custom Lists cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Lists.UpdatedAt ?? "<empty>", lastSyncActivities.Lists.UpdatedAt ?? "<empty>");
 
       // we get from online, local cache is not up to date
-      var onlineItems = TraktAPI.GetUserLists(TraktSettings.Username);
+      var onlineItems = TraktAPI.GetUserLists(TRAKT_SETTINGS.Username);
       if (onlineItems == null)
         return null;
 
@@ -1189,7 +1199,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       SaveFileCache(CustomListsFile, _CustomLists.ToJSON());
 
       // save new activity time for next time
-      TraktSettings.LastSyncActivities.Lists.UpdatedAt = lastSyncActivities.Lists.UpdatedAt;
+      TRAKT_SETTINGS.LastSyncActivities.Lists.UpdatedAt = lastSyncActivities.Lists.UpdatedAt;
 
       return onlineItems;
     }
@@ -1198,11 +1208,11 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     /// Returns the users custom lists with list item details
     /// </summary>
     /// <returns></returns>
-    internal static Dictionary<TraktListDetail, List<TraktListItem>> GetCustomLists(bool ignoreLastSyncTime = false)
+    public static Dictionary<TraktListDetail, List<TraktListItem>> GetCustomLists(bool ignoreLastSyncTime = false)
     {
       lock (syncLists)
       {
-        if (_CustomListsAndItems == null || (DateTime.Now - CustomListAge) > TimeSpan.FromMinutes(TraktSettings.WebRequestCacheMinutes))
+        if (_CustomListsAndItems == null || (DateTime.Now - CustomListAge) > TimeSpan.FromMinutes(TRAKT_SETTINGS.WebRequestCacheMinutes))
         {
           TraktLogger.Info("Getting current user custom lists from trakt");
 
@@ -1211,7 +1221,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
           if (userLists == null) return null;
 
           // get last time individual lists were updated online
-          var lastActivities = TraktSettings.LastListActivities.ToNullableList();
+          var lastActivities = TRAKT_SETTINGS.LastListActivities.ToNullableList();
 
           // get details of each list including items
           _CustomListsAndItems = new Dictionary<TraktListDetail, List<TraktListItem>>();
@@ -1236,7 +1246,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
             if (userList == null || listActivityCache == null || listActivityCache.UpdatedAt != list.UpdatedAt)
             {
               TraktLogger.Info("Getting list details for custom list from trakt.tv, local cache is out of date. Name = '{0}', Total Items = '{1}', ID = '{2}', Slug = '{3}', Last Updated = '{4}'", list.Name, list.ItemCount, list.Ids.Trakt, list.Ids.Slug, list.UpdatedAt);
-              userList = TraktAPI.GetUserListItems(TraktSettings.Username, list.Ids.Trakt.ToString());
+              userList = TraktAPI.GetUserListItems(TRAKT_SETTINGS.Username, list.Ids.Trakt.ToString());
               listUpdated = true;
             }
 
@@ -1267,7 +1277,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
             _CustomListsAndItems.Add(list, userList.ToList());
           }
           CustomListAge = DateTime.Now;
-          TraktSettings.LastListActivities = lastActivities;
+          TRAKT_SETTINGS.LastListActivities = lastActivities;
         }
       }
 
@@ -1293,14 +1303,14 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Lists.LikedAt == TraktSettings.LastSyncActivities.Lists.LikedAt)
+      if (lastSyncActivities.Lists.LikedAt == TRAKT_SETTINGS.LastSyncActivities.Lists.LikedAt)
       {
         var cachedItems = LikedLists;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("Liked lists cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Lists.LikedAt ?? "<empty>", lastSyncActivities.Lists.LikedAt ?? "<empty>");
+      TraktLogger.Info("Liked lists cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Lists.LikedAt ?? "<empty>", lastSyncActivities.Lists.LikedAt ?? "<empty>");
 
       // we get from online, local cache is not up to date
       var onlineItems = TraktAPI.GetLikedItems("lists");
@@ -1349,7 +1359,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         SaveFileCache(CustomListLikedFile, _LikedLists.ToJSON());
 
         // save new activity time for next time
-        TraktSettings.LastSyncActivities.Lists.LikedAt = lastSyncActivities.Lists.LikedAt;
+        TRAKT_SETTINGS.LastSyncActivities.Lists.LikedAt = lastSyncActivities.Lists.LikedAt;
 
         return pagedItems == null ? null : pagedItems.OrderByDescending(l => l.LikedAt);
       }
@@ -1404,17 +1414,17 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Episodes.Comment == TraktSettings.LastSyncActivities.Episodes.Comment)
+      if (lastSyncActivities.Episodes.Comment == TRAKT_SETTINGS.LastSyncActivities.Episodes.Comment)
       {
         var cachedItems = CommentedEpisodes;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("TV episode comments cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Episodes.Comment ?? "<empty>", lastSyncActivities.Episodes.Comment ?? "<empty>");
+      TraktLogger.Info("TV episode comments cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Episodes.Comment ?? "<empty>", lastSyncActivities.Episodes.Comment ?? "<empty>");
 
       // we get from online, local cache is not up to date
-      var onlineItems = TraktAPI.GetUsersComments(TraktSettings.Username, "all", "episodes", "min");
+      var onlineItems = TraktAPI.GetUsersComments(TRAKT_SETTINGS.Username, "all", "episodes", "min");
       if (onlineItems != null)
       {
         bool commentExists = false;
@@ -1435,7 +1445,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         {
           for (int i = 2; i <= onlineItems.TotalPages; i++)
           {
-            var nextPage = TraktAPI.GetUsersComments(TraktSettings.Username, "all", "episodes", "min", i);
+            var nextPage = TraktAPI.GetUsersComments(TRAKT_SETTINGS.Username, "all", "episodes", "min", i);
             if (nextPage == null || !nextPage.Comments.IsAny()) break;
 
             // if the comment id exists then we already have all comments
@@ -1460,7 +1470,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         SaveFileCache(EpisodesCommentedFile, _CommentedEpisodes.ToJSON());
 
         // save new activity time for next time
-        TraktSettings.LastSyncActivities.Episodes.Comment = lastSyncActivities.Episodes.Comment;
+        TRAKT_SETTINGS.LastSyncActivities.Episodes.Comment = lastSyncActivities.Episodes.Comment;
 
         return pagedItems == null ? null : pagedItems.OrderByDescending(c => c.Comment.CreatedAt);
       }
@@ -1509,17 +1519,17 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Shows.Comment == TraktSettings.LastSyncActivities.Shows.Comment)
+      if (lastSyncActivities.Shows.Comment == TRAKT_SETTINGS.LastSyncActivities.Shows.Comment)
       {
         var cachedItems = CommentedShows;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("TV show comments cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Shows.Comment ?? "<empty>", lastSyncActivities.Shows.Comment ?? "<empty>");
+      TraktLogger.Info("TV show comments cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Shows.Comment ?? "<empty>", lastSyncActivities.Shows.Comment ?? "<empty>");
 
       // we get from online, local cache is not up to date
-      var onlineItems = TraktAPI.GetUsersComments(TraktSettings.Username, "all", "shows", "min");
+      var onlineItems = TraktAPI.GetUsersComments(TRAKT_SETTINGS.Username, "all", "shows", "min");
       if (onlineItems != null)
       {
         bool commentExists = false;
@@ -1540,7 +1550,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         {
           for (int i = 2; i <= onlineItems.TotalPages; i++)
           {
-            var nextPage = TraktAPI.GetUsersComments(TraktSettings.Username, "all", "shows", "min", i);
+            var nextPage = TraktAPI.GetUsersComments(TRAKT_SETTINGS.Username, "all", "shows", "min", i);
             if (nextPage == null || !nextPage.Comments.IsAny()) break;
 
             // if the comment id exists then we already have all comments
@@ -1565,7 +1575,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         SaveFileCache(ShowsCommentedFile, _CommentedShows.ToJSON());
 
         // save new activity time for next time
-        TraktSettings.LastSyncActivities.Shows.Comment = lastSyncActivities.Shows.Comment;
+        TRAKT_SETTINGS.LastSyncActivities.Shows.Comment = lastSyncActivities.Shows.Comment;
 
         return pagedItems == null ? null : pagedItems.OrderByDescending(c => c.Comment.CreatedAt);
       }
@@ -1614,17 +1624,17 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Seasons.Comment == TraktSettings.LastSyncActivities.Seasons.Comment)
+      if (lastSyncActivities.Seasons.Comment == TRAKT_SETTINGS.LastSyncActivities.Seasons.Comment)
       {
         var cachedItems = CommentedSeasons;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("TV season comments cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Seasons.Comment ?? "<empty>", lastSyncActivities.Seasons.Comment ?? "<empty>");
+      TraktLogger.Info("TV season comments cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Seasons.Comment ?? "<empty>", lastSyncActivities.Seasons.Comment ?? "<empty>");
 
       // we get from online, local cache is not up to date
-      var onlineItems = TraktAPI.GetUsersComments(TraktSettings.Username, "all", "seasons", "min");
+      var onlineItems = TraktAPI.GetUsersComments(TRAKT_SETTINGS.Username, "all", "seasons", "min");
       if (onlineItems != null)
       {
         bool commentExists = false;
@@ -1645,7 +1655,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         {
           for (int i = 2; i <= onlineItems.TotalPages; i++)
           {
-            var nextPage = TraktAPI.GetUsersComments(TraktSettings.Username, "all", "seasons", "min", i);
+            var nextPage = TraktAPI.GetUsersComments(TRAKT_SETTINGS.Username, "all", "seasons", "min", i);
             if (nextPage == null || !nextPage.Comments.IsAny()) break;
 
             // if the comment id exists then we already have all comments
@@ -1670,7 +1680,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         SaveFileCache(SeasonsCommentedFile, _CommentedSeasons.ToJSON());
 
         // save new activity time for next time
-        TraktSettings.LastSyncActivities.Seasons.Comment = lastSyncActivities.Seasons.Comment;
+        TRAKT_SETTINGS.LastSyncActivities.Seasons.Comment = lastSyncActivities.Seasons.Comment;
 
         return pagedItems == null ? null : pagedItems.OrderByDescending(c => c.Comment.CreatedAt);
       }
@@ -1720,17 +1730,17 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Movies.Comment == TraktSettings.LastSyncActivities.Movies.Comment)
+      if (lastSyncActivities.Movies.Comment == TRAKT_SETTINGS.LastSyncActivities.Movies.Comment)
       {
         var cachedItems = CommentedMovies;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("Movie comments cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Movies.Comment ?? "<empty>", lastSyncActivities.Movies.Comment ?? "<empty>");
+      TraktLogger.Info("Movie comments cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Movies.Comment ?? "<empty>", lastSyncActivities.Movies.Comment ?? "<empty>");
 
       // we get from online, local cache is not up to date
-      var onlineItems = TraktAPI.GetUsersComments(TraktSettings.Username, "all", "movies", "min");
+      var onlineItems = TraktAPI.GetUsersComments(TRAKT_SETTINGS.Username, "all", "movies", "min");
       if (onlineItems != null)
       {
         bool commentExists = false;
@@ -1751,7 +1761,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         {
           for (int i = 2; i <= onlineItems.TotalPages; i++)
           {
-            var nextPage = TraktAPI.GetUsersComments(TraktSettings.Username, "all", "movies", "min", i);
+            var nextPage = TraktAPI.GetUsersComments(TRAKT_SETTINGS.Username, "all", "movies", "min", i);
             if (nextPage == null || !nextPage.Comments.IsAny()) break;
 
             // if the comment id exists then we already have all comments
@@ -1776,7 +1786,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         SaveFileCache(MoviesCommentedFile, _CommentedMovies.ToJSON());
 
         // save new activity time for next time
-        TraktSettings.LastSyncActivities.Movies.Comment = lastSyncActivities.Movies.Comment;
+        TRAKT_SETTINGS.LastSyncActivities.Movies.Comment = lastSyncActivities.Movies.Comment;
 
         return pagedItems == null ? null : pagedItems.OrderByDescending(c => c.Comment.CreatedAt);
       }
@@ -1825,17 +1835,17 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Lists.Comment == TraktSettings.LastSyncActivities.Lists.Comment)
+      if (lastSyncActivities.Lists.Comment == TRAKT_SETTINGS.LastSyncActivities.Lists.Comment)
       {
         var cachedItems = CommentedLists;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("List comments cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Lists.Comment ?? "<empty>", lastSyncActivities.Lists.Comment ?? "<empty>");
+      TraktLogger.Info("List comments cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Lists.Comment ?? "<empty>", lastSyncActivities.Lists.Comment ?? "<empty>");
 
       // we get from online, local cache is not up to date
-      var onlineItems = TraktAPI.GetUsersComments(TraktSettings.Username, "all", "lists", "min");
+      var onlineItems = TraktAPI.GetUsersComments(TRAKT_SETTINGS.Username, "all", "lists", "min");
       if (onlineItems != null)
       {
         bool commentExists = false;
@@ -1856,7 +1866,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         {
           for (int i = 2; i <= onlineItems.TotalPages; i++)
           {
-            var nextPage = TraktAPI.GetUsersComments(TraktSettings.Username, "all", "lists", "min", i);
+            var nextPage = TraktAPI.GetUsersComments(TRAKT_SETTINGS.Username, "all", "lists", "min", i);
             if (nextPage == null || !nextPage.Comments.IsAny()) break;
 
             // if the comment id exists then we already have all comments
@@ -1881,7 +1891,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         SaveFileCache(CustomListCommentedFile, _CommentedLists.ToJSON());
 
         // save new activity time for next time
-        TraktSettings.LastSyncActivities.Lists.Comment = lastSyncActivities.Lists.Comment;
+        TRAKT_SETTINGS.LastSyncActivities.Lists.Comment = lastSyncActivities.Lists.Comment;
 
         return pagedItems == null ? null : pagedItems.OrderByDescending(c => c.Comment.CreatedAt);
       }
@@ -1927,14 +1937,14 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Comments.LikedAt == TraktSettings.LastSyncActivities.Comments.LikedAt)
+      if (lastSyncActivities.Comments.LikedAt == TRAKT_SETTINGS.LastSyncActivities.Comments.LikedAt)
       {
         var cachedItems = LikedComments;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("Liked comments cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Comments.LikedAt ?? "<empty>", lastSyncActivities.Comments.LikedAt ?? "<empty>");
+      TraktLogger.Info("Liked comments cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Comments.LikedAt ?? "<empty>", lastSyncActivities.Comments.LikedAt ?? "<empty>");
 
       // we get from online, local cache is not up to date
       var onlineItems = TraktAPI.GetLikedItems("comments");
@@ -1983,7 +1993,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         SaveFileCache(CommentsLikedFile, _LikedComments.ToJSON());
 
         // save new activity time for next time
-        TraktSettings.LastSyncActivities.Comments.LikedAt = lastSyncActivities.Comments.LikedAt;
+        TRAKT_SETTINGS.LastSyncActivities.Comments.LikedAt = lastSyncActivities.Comments.LikedAt;
 
         return pagedItems == null ? null : pagedItems.OrderByDescending(l => l.LikedAt);
       }
@@ -2028,7 +2038,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         {
           if (_LastSyncActivities == null)
           {
-            TraktLogger.Info("Getting current user last activity times from trakt.tv");
+             TraktLogger.Info("Getting current user last activity times from trakt.tv");
             _LastSyncActivities = TraktAPI.GetLastSyncActivities();
           }
           return _LastSyncActivities;
@@ -2044,7 +2054,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktSyncPausedMovie> GetPausedMovies(out string lastMovieProcessedAt, bool ignoreLastSyncTime = false)
     {
-      lastMovieProcessedAt = TraktSettings.LastSyncActivities.Movies.PausedAt;
+      lastMovieProcessedAt = TRAKT_SETTINGS.LastSyncActivities.Movies.PausedAt;
 
       // get from cache regardless of last sync time
       if (ignoreLastSyncTime)
@@ -2061,14 +2071,14 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Movies.PausedAt == TraktSettings.LastSyncActivities.Movies.PausedAt)
+      if (lastSyncActivities.Movies.PausedAt == TRAKT_SETTINGS.LastSyncActivities.Movies.PausedAt)
       {
         var cachedItems = PausedMovies;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("Movie paused cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Movies.PausedAt ?? "<empty>", lastSyncActivities.Movies.PausedAt ?? "<empty>");
+      TraktLogger.Info("Movie paused cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Movies.PausedAt ?? "<empty>", lastSyncActivities.Movies.PausedAt ?? "<empty>");
 
       // we get from online, local cache is not up to date
       var onlineItems = TraktAPI.GetPausedMovies();
@@ -2080,7 +2090,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         SaveFileCache(MoviesPausedFile, _PausedMovies.ToJSON());
 
         // save new activity time for next time
-        TraktSettings.LastSyncActivities.Movies.PausedAt = lastSyncActivities.Movies.PausedAt;
+        TRAKT_SETTINGS.LastSyncActivities.Movies.PausedAt = lastSyncActivities.Movies.PausedAt;
       }
 
       return onlineItems;
@@ -2104,7 +2114,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktSyncPausedEpisode> GetPausedEpisodes(out string lastEpisodeProcessedAt, bool ignoreLastSyncTime = false)
     {
-      lastEpisodeProcessedAt = TraktSettings.LastSyncActivities.Episodes.PausedAt;
+      lastEpisodeProcessedAt = TRAKT_SETTINGS.LastSyncActivities.Episodes.PausedAt;
 
       // get from cache regardless of last sync time
       if (ignoreLastSyncTime)
@@ -2121,14 +2131,14 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
       // check the last time we have against the online time
       // if the times are the same try to load from cache
-      if (lastSyncActivities.Episodes.PausedAt == TraktSettings.LastSyncActivities.Episodes.PausedAt)
+      if (lastSyncActivities.Episodes.PausedAt == TRAKT_SETTINGS.LastSyncActivities.Episodes.PausedAt)
       {
         var cachedItems = PausedEpisodes;
         if (cachedItems != null)
           return cachedItems;
       }
 
-      TraktLogger.Info("TV episode paused cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TraktSettings.LastSyncActivities.Episodes.PausedAt ?? "<empty>", lastSyncActivities.Episodes.PausedAt ?? "<empty>");
+      TraktLogger.Info("TV episode paused cache is out of date, requesting updated data. Local Date = '{0}', Online Date = '{1}'", TRAKT_SETTINGS.LastSyncActivities.Episodes.PausedAt ?? "<empty>", lastSyncActivities.Episodes.PausedAt ?? "<empty>");
 
       // we get from online, local cache is not up to date
       var onlineItems = TraktAPI.GetPausedEpisodes();
@@ -2140,7 +2150,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
         SaveFileCache(EpisodesPausedFile, _PausedEpisodes.ToJSON());
 
         // save new activity time for next time
-        TraktSettings.LastSyncActivities.Episodes.PausedAt = lastSyncActivities.Episodes.PausedAt;
+        TRAKT_SETTINGS.LastSyncActivities.Episodes.PausedAt = lastSyncActivities.Episodes.PausedAt;
       }
 
       return onlineItems;
@@ -2172,7 +2182,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     {
       get
       {
-        if (_FollowerRequests == null || LastFollowerRequest < DateTime.UtcNow.Subtract(new TimeSpan(0, TraktSettings.WebRequestCacheMinutes, 0)))
+        if (_FollowerRequests == null || LastFollowerRequest < DateTime.UtcNow.Subtract(new TimeSpan(0, TRAKT_SETTINGS.WebRequestCacheMinutes, 0)))
         {
           _FollowerRequests = TraktAPI.GetFollowerRequests();
           LastFollowerRequest = DateTime.UtcNow;
@@ -2190,11 +2200,11 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     internal static void SaveFileCache(string file, string value)
     {
-      if ((file.Contains("{username}") && string.IsNullOrEmpty(TraktSettings.Username)) || value == null)
+      if ((file.Contains("{username}") && string.IsNullOrEmpty(TRAKT_SETTINGS.Username)) || value == null)
         return;
 
       // add username to filename
-      string filename = file.Replace("{username}", TraktSettings.Username);
+      string filename = file.Replace("{username}", TRAKT_SETTINGS.Username);
 
       TraktLogger.Debug("Saving file to disk. Filename = '{0}'", filename);
 
@@ -2211,11 +2221,11 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     internal static string LoadFileCache(string file, string defaultValue)
     {
-      if (file.Contains("{username}") && string.IsNullOrEmpty(TraktSettings.Username))
+      if (file.Contains("{username}") && string.IsNullOrEmpty(TRAKT_SETTINGS.Username))
         return null;
 
       // add username to filename
-      string filename = file.Replace("{username}", TraktSettings.Username);
+      string filename = file.Replace("{username}", TRAKT_SETTINGS.Username);
 
       string returnValue = defaultValue;
 
@@ -2839,7 +2849,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       // don't be too aggressive at clearing the last activities
       // its possible that we sync paused and library together or
       // enter/exit plugins frequently which enable paused sync
-      if (force || lastClearedAt < DateTime.Now.Subtract(new TimeSpan(0, TraktSettings.SyncPlaybackCacheExpiry, 0)))
+      if (force || lastClearedAt < DateTime.Now.Subtract(new TimeSpan(0, TRAKT_SETTINGS.SyncPlaybackCacheExpiry, 0)))
       {
         _LastSyncActivities = null;
 

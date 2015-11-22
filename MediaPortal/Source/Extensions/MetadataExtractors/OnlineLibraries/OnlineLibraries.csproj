@@ -212,9 +212,6 @@
     <Compile Include="Libraries\Trakt\Extension\JsonExtensions.cs" />
     <Compile Include="Libraries\Trakt\Extension\StringExtensions.cs" />
     <Compile Include="Libraries\Trakt\TraktAPI.cs" />
-    <Compile Include="Libraries\Trakt\TraktCache.cs" />
-    <Compile Include="Libraries\Trakt\TraktLogger.cs" />
-    <Compile Include="Libraries\Trakt\TraktSettings.cs" />
     <Compile Include="Libraries\Trakt\TraktURIs.cs" />
     <Compile Include="Matches\MatchStorage.cs" />
     <Compile Include="Libraries\MovieDbV3\Data\CastItem.cs" />

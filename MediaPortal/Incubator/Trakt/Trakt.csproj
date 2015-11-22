@@ -46,10 +46,11 @@
     </Compile>
     <Compile Include="Models\TraktSetupModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Service\TraktBasicHandler.cs" />
     <Compile Include="Service\TraktHandler.cs" />
     <Compile Include="Settings\Configuration\TraktSettingConfiguration.cs" />
     <Compile Include="Settings\TraktSettings.cs" />
+    <Compile Include="TraktCache.cs" />
+    <Compile Include="TraktLogger.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Language\strings_en.xml" />

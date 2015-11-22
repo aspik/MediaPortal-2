@@ -6,6 +6,8 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Web;
+using MediaPortal.Common;
+using MediaPortal.Common.Settings;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.DataStructures;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Enums;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Extension;
@@ -211,10 +213,10 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     /// Returns a list of Friends for current user
     /// Friends are a two-way relationship ie. both following each other
     /// </summary>
-    public static IEnumerable<TraktNetworkFriend> GetNetworkFriends()
-    {
-      return GetNetworkFriends(TraktSettings.Username);
-    }
+    //public static IEnumerable<TraktNetworkFriend> GetNetworkFriends()
+    //{
+    //  return GetNetworkFriends(TraktSettings.Username);
+    //}
 
     public static IEnumerable<TraktNetworkFriend> GetNetworkFriends(string user)
     {
@@ -227,7 +229,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     /// </summary>
     public static IEnumerable<TraktNetworkUser> GetNetworkFollowing()
     {
-      return GetNetworkFollowing(TraktSettings.Username);
+      return GetNetworkFollowing(Username);
     }
 
     public static IEnumerable<TraktNetworkUser> GetNetworkFollowing(string user)
@@ -241,7 +243,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     /// </summary>
     public static IEnumerable<TraktNetworkUser> GetNetworkFollowers()
     {
-      return GetNetworkFollowers(TraktSettings.Username);
+      return GetNetworkFollowers(Username);
     }
 
     public static IEnumerable<TraktNetworkUser> GetNetworkFollowers(string user)

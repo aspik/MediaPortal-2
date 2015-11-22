@@ -2,6 +2,8 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using MediaPortal.Common;
+using MediaPortal.Common.Logging;
 
 namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Extension
 {
@@ -87,7 +89,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Extension
       }
       catch (ArgumentException)
       {
-        TraktLogger.Debug("Failed to convert two letter country code to country name. Two Letter Code = '{0}'", twoLetterCode);
+        ServiceRegistration.Get<ILogger>().Error("Failed to convert two letter country code to country name. Two Letter Code = '{0}'", twoLetterCode);
         return twoLetterCode;
       }
       return regionInfo.DisplayName;

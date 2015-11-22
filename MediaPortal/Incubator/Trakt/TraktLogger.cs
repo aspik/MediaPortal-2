@@ -1,14 +1,16 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
 using MediaPortal.Common;
 using MediaPortal.Common.Logging;
+using MediaPortal.Common.Settings;
+using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.DataStructures;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Extension;
+using MediaPortal.UiComponents.Trakt.Settings;
 
-namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
+namespace MediaPortal.UiComponents.Trakt
 {
   public static class TraktLogger
   {
@@ -16,11 +18,13 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     internal delegate void OnLogReceivedDelegate(string message, bool error);
 
     internal static event OnLogReceivedDelegate OnLogReceived;
+    private static TraktSettings TRAKT_SETTINGS = ServiceRegistration.Get<ISettingsManager>().Load<TraktSettings>();
 
     static TraktLogger()
     {
+
       // default logging before we load settings
-      TraktSettings.LogLevel = 2;
+      TRAKT_SETTINGS.LogLevel = 2;
 
       // listen to webclient events from the TraktAPI so we can provide useful logging            
       TraktAPI.OnDataSend += new TraktAPI.OnDataSendDelegate(TraktAPI_OnDataSend);
@@ -31,12 +35,8 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static void Info(String log)
     {
-      // log to configuration window
-      if (TraktSettings.IsConfiguration == true)
-        OnLogReceived(log, false);
-     
-      if (TraktSettings.LogLevel >= 2)
-        ServiceRegistration.Get<ILogger>().Info("INFO", log);
+      if (TRAKT_SETTINGS.LogLevel >= 2)
+        ServiceRegistration.Get<ILogger>().Info("Trakt.tv: {0}", log);
     }
 
     public static void Info(String format, params Object[] args)
@@ -46,8 +46,8 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static void Debug(String log)
     {
-      if (TraktSettings.LogLevel >= 3)
-        ServiceRegistration.Get<ILogger>().Info("DEBUG", log);
+      if (TRAKT_SETTINGS.LogLevel >= 3)
+        ServiceRegistration.Get<ILogger>().Info("Trakt.tv: {0}", log);
     }
 
     public static void Debug(String format, params Object[] args)
@@ -57,12 +57,8 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static void Error(String log)
     {
-      // log to configuration window
-      if (TraktSettings.IsConfiguration == true)
-        OnLogReceived(log, true);
-
-      if (TraktSettings.LogLevel >= 0)
-        ServiceRegistration.Get<ILogger>().Info("ERROR", log);
+      if (TRAKT_SETTINGS.LogLevel >= 0)
+        ServiceRegistration.Get<ILogger>().Info("Trakt.tv: {0}", log);
     }
 
     public static void Error(String format, params Object[] args)
@@ -72,8 +68,8 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static void Warning(String log)
     {
-      if (TraktSettings.LogLevel >= 1)
-        ServiceRegistration.Get<ILogger>().Info("WARN", log);
+      if (TRAKT_SETTINGS.LogLevel >= 1)
+        ServiceRegistration.Get<ILogger>().Info("Trakt.tv: {0}", log);
     }
 
     public static void Warning(String format, params Object[] args)
@@ -100,7 +96,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     private static void TraktAPI_OnDataReceived(string response, HttpWebResponse webResponse)
     {
-      if (TraktSettings.LogLevel >= 3)
+      if (TRAKT_SETTINGS.LogLevel >= 3)
       {
         string headers = string.Empty;
         foreach (string key in webResponse.Headers.AllKeys)
@@ -157,7 +153,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       {
         // only log the response if we don't have debug logging enabled
         // we already log all responses in debug level
-        if (TraktSettings.LogLevel < 3)
+        if (TRAKT_SETTINGS.LogLevel < 3)
         {
           if ((response is TraktSyncResponse))
           {
