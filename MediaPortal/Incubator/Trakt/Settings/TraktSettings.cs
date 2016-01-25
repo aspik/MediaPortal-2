@@ -48,6 +48,9 @@ namespace MediaPortal.UiComponents.Trakt.Settings
     [Setting(SettingScope.User, DefaultValue = "")]
     public string Password { get; set; }
 
+    [Setting(SettingScope.User, DefaultValue = "")]
+    public string TraktOAuthToken { get; set; }
+
     [Setting(SettingScope.User, DefaultValue = false)]
     public bool UseSSL { get; set; }
 

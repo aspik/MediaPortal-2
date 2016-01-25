@@ -11,6 +11,7 @@ using MediaPortal.Common.Settings;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.DataStructures;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Enums;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Extension;
+using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Web;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.TraktAPI;
 
 namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
@@ -84,7 +85,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       // clear User Token if set
       UserToken = null;
 
-      var response = PostToTrakt(TraktURIs.Login, loginData ?? GetUserLogin(), false);
+      var response = TraktWeb.PostToTrakt(TraktURIs.Login, loginData ?? GetUserLogin(), false);
       return response.FromJSON<TraktUserToken>();
     }
 
@@ -97,13 +98,54 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
       return new TraktAuthentication { Username = Username, Password = Password }.ToJSON();
     }
 
+    public static TraktOAuthToken GetOAuthToken(string key)
+    {
+      // set our required headers now
+      TraktWeb.CustomRequestHeaders.Clear();
+
+      TraktWeb.CustomRequestHeaders.Add("trakt-api-key", "aea41e88de3cd0f8c8b2404d84d2e5d7317789e67fad223eba107aea2ef59068");
+      TraktWeb.CustomRequestHeaders.Add("trakt-api-version", "2");
+      //TraktWeb.CustomRequestHeaders.Add("trakt-user-login", Username);
+
+      string response = TraktWeb.PostToTrakt(TraktURIs.LoginOAuth, GetOAuthLogin(key), true);
+      var loginResponse = response.FromJSON<TraktOAuthToken>();
+
+      if (loginResponse == null || loginResponse.AccessToken == null)
+        return loginResponse;
+
+      // add the token for authenticated methods
+      TraktWeb.CustomRequestHeaders.Add("Authorization", string.Format("Bearer {0}", loginResponse.AccessToken));
+
+      return loginResponse;
+    }
+
+    /// <summary>
+    /// Gets a oAuth Login object
+    /// </summary>
+    private static string GetOAuthLogin(string key)
+    {
+      bool isPinCode = key.Length == 8;
+
+      return new TraktOAuthLogin
+      {
+        Code = isPinCode ? key : null,
+        RefreshToken = isPinCode ? null : key,
+        ClientId = "aea41e88de3cd0f8c8b2404d84d2e5d7317789e67fad223eba107aea2ef59068",
+        ClientSecret = "adafedb5cd065e6abeb9521b8b64bc66adb010a7c08128811bf32c989f35b77a",
+        RedirectUri = "urn:ietf:wg:oauth:2.0:oob",
+        GrantType = isPinCode ? "authorization_code" : "refresh_token"
+      }
+        .ToJSON();
+    }
+
+
     #endregion
 
     #region Sync
 
     public static TraktLastSyncActivities GetLastSyncActivities()
     {
-      var response = GetFromTrakt(TraktURIs.SyncLastActivities);
+      var response = TraktWeb.GetFromTrakt(TraktURIs.SyncLastActivities);
       return response.FromJSON<TraktLastSyncActivities>();
     }
 
@@ -113,13 +155,13 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktSyncPausedMovie> GetPausedMovies()
     {
-      var response = GetFromTrakt(TraktURIs.SyncPausedMovies);
+      var response = TraktWeb.GetFromTrakt(TraktURIs.SyncPausedMovies);
       return response.FromJSONArray<TraktSyncPausedMovie>();
     }
 
     public static IEnumerable<TraktSyncPausedEpisode> GetPausedEpisodes()
     {
-      var response = GetFromTrakt(TraktURIs.SyncPausedEpisodes);
+      var response = TraktWeb.GetFromTrakt(TraktURIs.SyncPausedEpisodes);
       return response.FromJSONArray<TraktSyncPausedEpisode>();
     }
 
@@ -129,13 +171,13 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktMovieCollected> GetCollectedMovies()
     {
-      var response = GetFromTrakt(TraktURIs.SyncCollectionMovies);
+      var response = TraktWeb.GetFromTrakt(TraktURIs.SyncCollectionMovies);
       return response.FromJSONArray<TraktMovieCollected>();
     }
 
     public static IEnumerable<TraktEpisodeCollected> GetCollectedEpisodes()
     {
-      var response = GetFromTrakt(TraktURIs.SyncCollectionEpisodes);
+      var response = TraktWeb.GetFromTrakt(TraktURIs.SyncCollectionEpisodes);
       return response.FromJSONArray<TraktEpisodeCollected>();
     }
 
@@ -145,13 +187,13 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktMovieWatched> GetWatchedMovies()
     {
-      var response = GetFromTrakt(TraktURIs.SyncWatchedMovies);
+      var response = TraktWeb.GetFromTrakt(TraktURIs.SyncWatchedMovies);
       return response.FromJSONArray<TraktMovieWatched>();
     }
 
     public static IEnumerable<TraktEpisodeWatched> GetWatchedEpisodes()
     {
-      var response = GetFromTrakt(TraktURIs.SyncWatchedEpisodes);
+      var response = TraktWeb.GetFromTrakt(TraktURIs.SyncWatchedEpisodes);
       return response.FromJSONArray<TraktEpisodeWatched>();
     }
 
@@ -161,25 +203,25 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktMovieRated> GetRatedMovies()
     {
-      var response = GetFromTrakt(TraktURIs.SyncRatedMovies);
+      var response = TraktWeb.GetFromTrakt(TraktURIs.SyncRatedMovies);
       return response.FromJSONArray<TraktMovieRated>();
     }
 
     public static IEnumerable<TraktEpisodeRated> GetRatedEpisodes()
     {
-      var response = GetFromTrakt(TraktURIs.SyncRatedEpisodes);
+      var response = TraktWeb.GetFromTrakt(TraktURIs.SyncRatedEpisodes);
       return response.FromJSONArray<TraktEpisodeRated>();
     }
 
     public static IEnumerable<TraktShowRated> GetRatedShows()
     {
-      var response = GetFromTrakt(TraktURIs.SyncRatedShows);
+      var response = TraktWeb.GetFromTrakt(TraktURIs.SyncRatedShows);
       return response.FromJSONArray<TraktShowRated>();
     }
 
     public static IEnumerable<TraktSeasonRated> GetRatedSeasons()
     {
-      var response = GetFromTrakt(TraktURIs.SyncRatedSeasons);
+      var response = TraktWeb.GetFromTrakt(TraktURIs.SyncRatedSeasons);
       return response.FromJSONArray<TraktSeasonRated>();
     }
 
@@ -189,13 +231,13 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static TraktUserStatistics GetUserStatistics(string user)
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.UserStats, user));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.UserStats, user));
       return response.FromJSON<TraktUserStatistics>();
     }
 
     public static TraktUserSummary GetUserProfile(string user)
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.UserProfile, user));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.UserProfile, user));
       return response.FromJSON<TraktUserSummary>();
     }
 
@@ -205,7 +247,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     /// <returns></returns>
     public static IEnumerable<TraktFollowerRequest> GetFollowerRequests()
     {
-      var response = GetFromTrakt(TraktURIs.UserFollowerRequests);
+      var response = TraktWeb.GetFromTrakt(TraktURIs.UserFollowerRequests);
       return response.FromJSONArray<TraktFollowerRequest>();
     }
 
@@ -220,7 +262,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktNetworkFriend> GetNetworkFriends(string user)
     {
-      string response = GetFromTrakt(string.Format(TraktURIs.NetworkFriends, user));
+      string response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.NetworkFriends, user));
       return response.FromJSONArray<TraktNetworkFriend>();
     }
 
@@ -234,7 +276,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktNetworkUser> GetNetworkFollowing(string user)
     {
-      string response = GetFromTrakt(string.Format(TraktURIs.NetworkFollowing, user));
+      string response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.NetworkFollowing, user));
       return response.FromJSONArray<TraktNetworkUser>();
     }
 
@@ -248,13 +290,13 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktNetworkUser> GetNetworkFollowers(string user)
     {
-      string response = GetFromTrakt(string.Format(TraktURIs.NetworkFollowers, user));
+      string response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.NetworkFollowers, user));
       return response.FromJSONArray<TraktNetworkUser>();
     }
 
     public static TraktNetworkUser NetworkApproveFollower(int id)
     {
-      string response = PostToTrakt(string.Format(TraktURIs.NetworkFollowRequest, id), string.Empty);
+      string response = TraktWeb.PostToTrakt(string.Format(TraktURIs.NetworkFollowRequest, id), string.Empty);
       return response.FromJSON<TraktNetworkUser>();
     }
 
@@ -265,7 +307,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static TraktNetworkApproval NetworkFollowUser(string username)
     {
-      string response = PostToTrakt(string.Format(TraktURIs.NetworkFollowUser, username), string.Empty);
+      string response = TraktWeb.PostToTrakt(string.Format(TraktURIs.NetworkFollowUser, username), string.Empty);
       return response.FromJSON<TraktNetworkApproval>();
     }
 
@@ -276,13 +318,13 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktMovieHistory> GetUsersMovieWatchedHistory(string username, int page = 1, int maxItems = 100)
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.UserWatchedHistoryMovies, username, page, maxItems));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.UserWatchedHistoryMovies, username, page, maxItems));
       return response.FromJSONArray<TraktMovieHistory>();
     }
 
     public static IEnumerable<TraktEpisodeHistory> GetUsersEpisodeWatchedHistory(string username, int page = 1, int maxItems = 100)
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.UserWatchedHistoryEpisodes, username, page, maxItems));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.UserWatchedHistoryEpisodes, username, page, maxItems));
       return response.FromJSONArray<TraktEpisodeHistory>();
     }
 
@@ -324,19 +366,19 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktListDetail> GetUserLists(string username)
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.UserLists, username));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.UserLists, username));
       return response.FromJSONArray<TraktListDetail>();
     }
 
     public static IEnumerable<TraktListItem> GetUserListItems(string username, string listId, string extendedInfoParams = "min")
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.UserListItems, username, listId, extendedInfoParams));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.UserListItems, username, listId, extendedInfoParams));
       return response.FromJSONArray<TraktListItem>();
     }
 
     public static TraktListDetail CreateCustomList(TraktList list, string username)
     {
-      var response = PostToTrakt(string.Format(TraktURIs.UserListAdd, username), list.ToJSON());
+      var response = TraktWeb.PostToTrakt(string.Format(TraktURIs.UserListAdd, username), list.ToJSON());
       return response.FromJSON<TraktListDetail>();
     }
 
@@ -348,13 +390,13 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static TraktSyncResponse AddItemsToList(string username, string id, TraktSyncAll items)
     {
-      var response = PostToTrakt(string.Format(TraktURIs.UserListItemsAdd, username, id), items.ToJSON());
+      var response = TraktWeb.PostToTrakt(string.Format(TraktURIs.UserListItemsAdd, username, id), items.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveItemsFromList(string username, string id, TraktSyncAll items)
     {
-      var response = PostToTrakt(string.Format(TraktURIs.UserListItemsRemove, username, id), items.ToJSON());
+      var response = TraktWeb.PostToTrakt(string.Format(TraktURIs.UserListItemsRemove, username, id), items.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
@@ -365,7 +407,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static bool LikeList(string username, int id)
     {
-      var response = PostToTrakt(string.Format(TraktURIs.UserListLike, username, id), null);
+      var response = TraktWeb.PostToTrakt(string.Format(TraktURIs.UserListLike, username, id), null);
       return response != null;
     }
 
@@ -380,25 +422,25 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktMovieWatchList> GetWatchListMovies(string username, string extendedInfoParams = "min")
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.UserWatchlistMovies, username, extendedInfoParams));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.UserWatchlistMovies, username, extendedInfoParams));
       return response.FromJSONArray<TraktMovieWatchList>();
     }
 
     public static IEnumerable<TraktShowWatchList> GetWatchListShows(string username, string extendedInfoParams = "min")
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.UserWatchlistShows, username, extendedInfoParams));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.UserWatchlistShows, username, extendedInfoParams));
       return response.FromJSONArray<TraktShowWatchList>();
     }
 
     public static IEnumerable<TraktSeasonWatchList> GetWatchListSeasons(string username, string extendedInfoParams = "min")
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.UserWatchlistSeasons, username, extendedInfoParams));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.UserWatchlistSeasons, username, extendedInfoParams));
       return response.FromJSONArray<TraktSeasonWatchList>();
     }
 
     public static IEnumerable<TraktEpisodeWatchList> GetWatchListEpisodes(string username, string extendedInfoParams = "min")
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.UserWatchlistEpisodes, username, extendedInfoParams));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.UserWatchlistEpisodes, username, extendedInfoParams));
       return response.FromJSONArray<TraktEpisodeWatchList>();
     }
 
@@ -447,7 +489,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktMovieSummary> GetRelatedMovies(string id, int limit = 10)
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.RelatedMovies, id, limit));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.RelatedMovies, id, limit));
       return response.FromJSONArray<TraktMovieSummary>();
     }
 
@@ -457,7 +499,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktComment> GetMovieComments(string id, int page = 1, int maxItems = 1000)
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.MovieComments, id, page, maxItems));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.MovieComments, id, page, maxItems));
       return response.FromJSONArray<TraktComment>();
     }
 
@@ -575,7 +617,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktShowSummary> GetRelatedShows(string id, int limit = 10)
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.RelatedShows, id, limit));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.RelatedShows, id, limit));
       return response.FromJSONArray<TraktShowSummary>();
     }
 
@@ -585,7 +627,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static TraktShowSummary GetShowSummary(string id)
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.ShowSummary, id));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.ShowSummary, id));
       return response.FromJSON<TraktShowSummary>();
     }
 
@@ -630,13 +672,13 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
     /// <param name="extendedParameter">request parameters, "episodes,full,images"</param>
     public static IEnumerable<TraktSeasonSummary> GetShowSeasons(string id, string extendedParameter = "full,images")
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.ShowSeasons, id, extendedParameter));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.ShowSeasons, id, extendedParameter));
       return response.FromJSONArray<TraktSeasonSummary>();
     }
 
     public static IEnumerable<TraktComment> GetSeasonComments(string id, int season, int page = 1, int maxItems = 1000)
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.SeasonComments, id, season, page, maxItems));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.SeasonComments, id, season, page, maxItems));
       return response.FromJSONArray<TraktComment>();
     }
 
@@ -646,7 +688,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktComment> GetShowComments(string id, int page = 1, int maxItems = 1000)
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.ShowComments, id, page, maxItems));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.ShowComments, id, page, maxItems));
       return response.FromJSONArray<TraktComment>();
     }
 
@@ -715,7 +757,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktShowSummary> GetRecommendedShows()
     {
-      var response = GetFromTrakt(TraktURIs.RecommendedShows);
+      var response = TraktWeb.GetFromTrakt(TraktURIs.RecommendedShows);
       return response.FromJSONArray<TraktShowSummary>();
     }
 
@@ -781,7 +823,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktComment> GetEpisodeComments(string id, int season, int episode, int page = 1, int maxItems = 1000)
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.EpisodeComments, id, season, episode, page, maxItems));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.EpisodeComments, id, season, episode, page, maxItems));
       return response.FromJSONArray<TraktComment>();
     }
 
@@ -791,7 +833,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static IEnumerable<TraktEpisodeSummary> GetSeasonEpisodes(string showId, string seasonId)
     {
-      var response = GetFromTrakt(string.Format(TraktURIs.SeasonEpisodes, showId, seasonId));
+      var response = TraktWeb.GetFromTrakt(string.Format(TraktURIs.SeasonEpisodes, showId, seasonId));
       return response.FromJSONArray<TraktEpisodeSummary>();
     }
 
@@ -1147,55 +1189,55 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static TraktSyncResponse AddMoviesToCollecton(TraktSyncMoviesCollected movies)
     {
-      var response = PostToTrakt(TraktURIs.SyncCollectionAdd, movies.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncCollectionAdd, movies.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveMoviesFromCollecton(TraktSyncMovies movies)
     {
-      var response = PostToTrakt(TraktURIs.SyncCollectionRemove, movies.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncCollectionRemove, movies.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddShowsToCollectonEx(TraktSyncShowsEx shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncCollectionAdd, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncCollectionAdd, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddShowsToCollecton(TraktSyncShows shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncCollectionAdd, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncCollectionAdd, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveShowsFromCollecton(TraktSyncShows shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncCollectionAdd, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncCollectionAdd, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddEpisodesToCollecton(TraktSyncEpisodesCollected episodes)
     {
-      var response = PostToTrakt(TraktURIs.SyncCollectionAdd, episodes.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncCollectionAdd, episodes.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveEpisodesFromCollecton(TraktSyncEpisodes episodes)
     {
-      var response = PostToTrakt(TraktURIs.SyncCollectionRemove, episodes.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncCollectionRemove, episodes.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddShowsToCollectonEx(TraktSyncShowsCollectedEx shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncCollectionAdd, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncCollectionAdd, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveShowsFromCollectonEx(TraktSyncShowsEx shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncCollectionRemove, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncCollectionRemove, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
@@ -1289,55 +1331,55 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static TraktSyncResponse AddMoviesToWatchedHistory(TraktSyncMoviesWatched movies)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchedHistoryAdd, movies.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchedHistoryAdd, movies.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveMoviesFromWatchedHistory(TraktSyncMovies movies)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchedHistoryRemove, movies.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchedHistoryRemove, movies.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddShowsToWatchedHistory(TraktSyncShows shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchedHistoryAdd, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchedHistoryAdd, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveShowsFromWatchedHistory(TraktSyncShows shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchedHistoryRemove, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchedHistoryRemove, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddEpisodesToWatchedHistory(TraktSyncEpisodesWatched episodes)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchedHistoryAdd, episodes.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchedHistoryAdd, episodes.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveEpisodesFromWatchedHistory(TraktSyncEpisodes episodes)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchedHistoryRemove, episodes.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchedHistoryRemove, episodes.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddShowsToWatchedHistoryEx(TraktSyncShowsEx shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchedHistoryAdd, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchedHistoryAdd, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddShowsToWatchedHistoryEx(TraktSyncShowsWatchedEx shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchedHistoryAdd, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchedHistoryAdd, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveShowsFromWatchedHistoryEx(TraktSyncShowsEx shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchedHistoryRemove, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchedHistoryRemove, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
@@ -1431,61 +1473,61 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static TraktSyncResponse AddMoviesToRatings(TraktSyncMoviesRated movies)
     {
-      var response = PostToTrakt(TraktURIs.SyncRatingsAdd, movies.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncRatingsAdd, movies.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveMoviesFromRatings(TraktSyncMovies movies)
     {
-      var response = PostToTrakt(TraktURIs.SyncRatingsRemove, movies.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncRatingsRemove, movies.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddShowsToRatings(TraktSyncShowsRated shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncRatingsAdd, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncRatingsAdd, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveShowsFromRatings(TraktSyncShows shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncRatingsRemove, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncRatingsRemove, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddEpisodesToRatings(TraktSyncEpisodesRated episodes)
     {
-      var response = PostToTrakt(TraktURIs.SyncRatingsAdd, episodes.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncRatingsAdd, episodes.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddShowsToRatingsEx(TraktSyncShowsRatedEx shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncRatingsAdd, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncRatingsAdd, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddSeasonsToRatingsEx(TraktSyncSeasonsRatedEx shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncRatingsAdd, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncRatingsAdd, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveEpisodesFromRatings(TraktSyncEpisodes episodes)
     {
-      var response = PostToTrakt(TraktURIs.SyncRatingsRemove, episodes.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncRatingsRemove, episodes.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveShowsFromRatingsEx(TraktSyncShowsRatedEx shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncRatingsRemove, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncRatingsRemove, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveSeasonsFromRatingsEx(TraktSyncSeasonsRatedEx shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncRatingsRemove, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncRatingsRemove, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
@@ -1651,37 +1693,37 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static TraktScrobbleResponse StartMovieScrobble(TraktScrobbleMovie movie)
     {
-      var response = PostToTrakt(TraktURIs.ScrobbleStart, movie.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.ScrobbleStart, movie.ToJSON());
       return response.FromJSON<TraktScrobbleResponse>();
     }
 
     public static TraktScrobbleResponse StartEpisodeScrobble(TraktScrobbleEpisode episode)
     {
-      var response = PostToTrakt(TraktURIs.ScrobbleStart, episode.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.ScrobbleStart, episode.ToJSON());
       return response.FromJSON<TraktScrobbleResponse>();
     }
 
     public static TraktScrobbleResponse PauseMovieScrobble(TraktScrobbleMovie movie)
     {
-      var response = PostToTrakt(TraktURIs.ScrobblePause, movie.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.ScrobblePause, movie.ToJSON());
       return response.FromJSON<TraktScrobbleResponse>();
     }
 
     public static TraktScrobbleResponse PauseEpisodeScrobble(TraktScrobbleEpisode episode)
     {
-      var response = PostToTrakt(TraktURIs.ScrobblePause, episode.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.ScrobblePause, episode.ToJSON());
       return response.FromJSON<TraktScrobbleResponse>();
     }
 
     public static TraktScrobbleResponse StopMovieScrobble(TraktScrobbleMovie movie)
     {
-      var response = PostToTrakt(TraktURIs.ScrobbleStop, movie.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.ScrobbleStop, movie.ToJSON());
       return response.FromJSON<TraktScrobbleResponse>();
     }
 
     public static TraktScrobbleResponse StopEpisodeScrobble(TraktScrobbleEpisode episode)
     {
-      var response = PostToTrakt(TraktURIs.ScrobbleStop, episode.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.ScrobbleStop, episode.ToJSON());
       return response.FromJSON<TraktScrobbleResponse>();
     }
 
@@ -1691,61 +1733,61 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static TraktSyncResponse AddMoviesToWatchlist(TraktSyncMovies movies)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchlistAdd, movies.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchlistAdd, movies.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveMoviesFromWatchlist(TraktSyncMovies movies)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchlistRemove, movies.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchlistRemove, movies.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddShowsToWatchlist(TraktSyncShows shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchlistAdd, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchlistAdd, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddShowsToWatchlistEx(TraktSyncShowsEx shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchlistAdd, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchlistAdd, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveShowsFromWatchlist(TraktSyncShows shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchlistRemove, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchlistRemove, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveShowsFromWatchlistEx(TraktSyncShowsEx shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchlistRemove, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchlistRemove, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddSeasonsToWatchlist(TraktSyncSeasonsEx shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchlistAdd, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchlistAdd, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveSeasonsFromWatchlist(TraktSyncSeasonsEx shows)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchlistRemove, shows.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchlistRemove, shows.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse AddEpisodesToWatchlist(TraktSyncEpisodes episodes)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchlistAdd, episodes.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchlistAdd, episodes.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
     public static TraktSyncResponse RemoveEpisodesFromWatchlist(TraktSyncEpisodes episodes)
     {
-      var response = PostToTrakt(TraktURIs.SyncWatchlistRemove, episodes.ToJSON());
+      var response = TraktWeb.PostToTrakt(TraktURIs.SyncWatchlistRemove, episodes.ToJSON());
       return response.FromJSON<TraktSyncResponse>();
     }
 
@@ -1859,7 +1901,7 @@ namespace MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt
 
     public static bool LikeComment(int id)
     {
-      var response = PostToTrakt(string.Format(TraktURIs.CommentLike, id), null);
+      var response = TraktWeb.PostToTrakt(string.Format(TraktURIs.CommentLike, id), null);
       return response != null;
     }
 

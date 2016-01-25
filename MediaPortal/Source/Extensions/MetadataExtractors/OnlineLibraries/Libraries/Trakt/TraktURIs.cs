@@ -5,8 +5,10 @@
   /// </summary>
   public static class TraktURIs
   {
-    
+
+    public const string PinUrl = @"http://trakt.tv/pin/{0}";
     public const string Login = "https://api-v2launch.trakt.tv/auth/login";
+    public const string LoginOAuth = @"http://api-v2launch.trakt.tv/oauth/token";
 
     public const string SyncLastActivities = "https://api-v2launch.trakt.tv/sync/last_activities";
 

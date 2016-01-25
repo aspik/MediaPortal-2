@@ -25,7 +25,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Net.Mime;
 using System.Reflection;
 using System.Threading;
 using MediaPortal.Common;
@@ -44,6 +47,7 @@ using MediaPortal.UI.Presentation.Models;
 using MediaPortal.UI.Presentation.Workflow;
 using MediaPortal.UI.ServerCommunication;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Enums;
+using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Web;
 using MediaPortal.UiComponents.Trakt.Settings;
 
 namespace MediaPortal.UiComponents.Trakt.Models
@@ -58,7 +62,7 @@ namespace MediaPortal.UiComponents.Trakt.Models
 
     private ISettingsManager settingsManager = ServiceRegistration.Get<ISettingsManager>();
     private TraktSettings TRAKT_SETTINGS = ServiceRegistration.Get<ISettingsManager>().Load<TraktSettings>();
-
+    
     #endregion
 
     #region Protected fields
@@ -67,7 +71,9 @@ namespace MediaPortal.UiComponents.Trakt.Models
     protected readonly AbstractProperty _isSynchronizingProperty = new WProperty(typeof(bool), false);
     protected readonly AbstractProperty _usermameProperty = new WProperty(typeof(string), null);
     protected readonly AbstractProperty _passwordProperty = new WProperty(typeof(string), null);
+    protected readonly AbstractProperty _pinCodeProperty = new WProperty(typeof(string), null);
     protected readonly AbstractProperty _testStatusProperty = new WProperty(typeof(string), string.Empty);
+    protected readonly AbstractProperty _qrCodeProperty = new WProperty(typeof(string), string.Empty);
 
     #endregion
 
@@ -117,6 +123,17 @@ namespace MediaPortal.UiComponents.Trakt.Models
       set { _passwordProperty.SetValue(value); }
     }
 
+    public AbstractProperty PinCodeProperty
+    {
+      get { return _pinCodeProperty; }
+    }
+
+    public string PinCode
+    {
+      get { return (string)_pinCodeProperty.GetValue(); }
+      set { _pinCodeProperty.SetValue(value); }
+    }
+
     public AbstractProperty TestStatusProperty
     {
       get { return _testStatusProperty; }
@@ -127,6 +144,18 @@ namespace MediaPortal.UiComponents.Trakt.Models
       get { return (string)_testStatusProperty.GetValue(); }
       set { _testStatusProperty.SetValue(value); }
     }
+
+    public AbstractProperty QRCodeProperty
+    {
+      get { return _qrCodeProperty; }
+    }
+
+    public string QRCode
+    {
+      get { return (string)_qrCodeProperty.GetValue(); }
+      set { _qrCodeProperty.SetValue(value); }
+    }
+
 
     #endregion
 
@@ -139,15 +168,13 @@ namespace MediaPortal.UiComponents.Trakt.Models
     {
       TRAKT_SETTINGS.EnableTrakt = IsEnabled;
       TRAKT_SETTINGS.Username = Username;
-      TRAKT_SETTINGS.Password = Password;
+      //TRAKT_SETTINGS.Password = Password;
+      
+
+      //TRAKT_SETTINGS.TraktOAuthToken = response.RefreshToken;
+      //PinCode = string.Empty;
       TRAKT_SETTINGS.LastSyncActivities = TraktCache.LastSyncActivities.ToJSON().FromJSON<TraktLastSyncActivities>();
 
-      // Save New Account Settings 
-      if (TRAKT_SETTINGS.UserLogins != null && !TRAKT_SETTINGS.UserLogins.Exists(u => u.Username == TRAKT_SETTINGS.Username))
-      {
-        TRAKT_SETTINGS.UserLogins.Add(new TraktAuthentication { Username = TRAKT_SETTINGS.Username, Password = TRAKT_SETTINGS.Password });
-      }
-      // settings.AccountStatus = ConnectionState.Connected;
 
       // save user activity cache
       TraktCache.Save();
@@ -155,55 +182,59 @@ namespace MediaPortal.UiComponents.Trakt.Models
       settingsManager.Save(TRAKT_SETTINGS);
     }
 
-    /// <summary>
-    /// Uses the current accound information and tries to validate them at trakt.
-    /// </summary>
-    public void TestAccount()
-    {
-
-      var account = new TraktAuthentication
-      {
-        Username = this.Username,
-        Password = this.Password
-      };
-
-      TraktUserToken response = null;
-      response = TraktAPI.Login(account.ToJSON());
-
-      if (response == null || string.IsNullOrEmpty(response.Token))
-      {
-        TestStatus = "Error validating account";
-      }
-      else
-      {
-        TestStatus = "Account OK!";
-        // Save User Token
-        TraktAPI.UserToken = response.Token;
-        // Save New Account Settings
-        TRAKT_SETTINGS.Username = account.Username;
-        TRAKT_SETTINGS.Password = account.Password;
-
-        if (TRAKT_SETTINGS.UserLogins != null && !TRAKT_SETTINGS.UserLogins.Exists(u => u.Username == TRAKT_SETTINGS.Username))
-        {
-          TRAKT_SETTINGS.UserLogins.Add(new TraktAuthentication { Username = TRAKT_SETTINGS.Username, Password = TRAKT_SETTINGS.Password });
-        }
-        TRAKT_SETTINGS.AccountStatus = ConnectionState.Connected;
-
-        TraktActivity ac = new TraktActivity();
-        TraktUserStatistics stat = TraktAPI.GetUserStatistics(Username);
-        TraktUserSummary sum = TraktAPI.GetUserProfile(Username);
-        
-      }
-    }
-
     public void SyncMediaToTrakt()
     {
       if (!IsSynchronizing)
       {
+
+        if (!CheckAccountDetails())
+          return;
+
+        if(!Login())
+          return;
+
+        if (!TraktCache.RefreshData())
+          return;
+
         IsSynchronizing = true;
         IThreadPool threadPool = ServiceRegistration.Get<IThreadPool>();
         threadPool.Add(SyncMediaToTrakt_Async, ThreadPriority.BelowNormal);
       }
+    }
+
+    private bool CheckAccountDetails()
+    {
+      if(string.IsNullOrEmpty(TRAKT_SETTINGS.TraktOAuthToken))
+      {
+        if (string.IsNullOrEmpty(PinCode) || PinCode.Length != 8)
+        {
+          //TestStatus = "Error";
+          TraktLogger.Error("Trakt.tv error in credentials");
+          return false;
+        }
+      }
+      return true;
+    }
+
+    private bool Login()
+    {
+      TraktLogger.Info("Exchanging {0} for access-token...", PinCode.Length == 8 ? "pin-code" : "refresh-token");
+      var response = TraktAPI.GetOAuthToken(PinCode.Length == 8 ? PinCode : TRAKT_SETTINGS.TraktOAuthToken);
+      if (response == null || string.IsNullOrEmpty(response.AccessToken))
+      {
+        //TestStatus = Error
+        TraktLogger.Error("Unable to login to trakt, check log for details");
+        PinCode = string.Empty;
+        return false;
+      }
+
+      //TestStatus = Success
+      TRAKT_SETTINGS.TraktOAuthToken = response.RefreshToken;
+      settingsManager.Save(TRAKT_SETTINGS);
+      PinCode = string.Empty;
+      TraktLogger.Info("Succes");
+
+      return true;
     }
 
     public void SyncMediaToTrakt_Async()
@@ -1103,43 +1134,54 @@ namespace MediaPortal.UiComponents.Trakt.Models
    
     public void EnterModelContext(NavigationContext oldContext, NavigationContext newContext)
     {
+
+
       // Load settings
       IsEnabled = TRAKT_SETTINGS.EnableTrakt;
-      Username = TRAKT_SETTINGS.Username;
-      Password = TRAKT_SETTINGS.Password;
+      //Username = TRAKT_SETTINGS.Username;
+      //Password = TRAKT_SETTINGS.Password;
+      PinCode = string.Empty;
 
       // initialise API settings
-      TraktAPI.ApplicationId = TRAKT_SETTINGS.ApplicationId;
-      TraktAPI.UserAgent = TRAKT_SETTINGS.UserAgent;
-      TraktAPI.UseSSL = TRAKT_SETTINGS.UseSSL;
+      //TraktAPI.ApplicationId = TRAKT_SETTINGS.ApplicationId;
+      //TraktAPI.UserAgent = TRAKT_SETTINGS.UserAgent;
+      //TraktAPI.UseSSL = TRAKT_SETTINGS.UseSSL;
 
-      var account = new TraktAuthentication
-      {
-        Username = TRAKT_SETTINGS.Username,
-        Password = TRAKT_SETTINGS.Password
-      };
+      //var account = new TraktAuthentication
+      //{
+      //  Username = TRAKT_SETTINGS.Username,
+      //  Password = TRAKT_SETTINGS.Password
+      //};
 
-      if (!account.Password.Equals("") || !account.Username.Equals(""))
-      {
-        var response = TraktAPI.Login(account.ToJSON());
-        if (response == null || string.IsNullOrEmpty(response.Token))
-        {
-          TestStatus = "Failed login using saved credantials";
-        }
-        else
-        {
-          TestStatus = "Successfully logged into Trakt.tv";
-          // save token
-          TraktAPI.UserToken = response.Token;
-          TraktAPI.Username = TRAKT_SETTINGS.Username;
-          TraktAPI.Password = TRAKT_SETTINGS.Password;
-          TRAKT_SETTINGS.AccountStatus = ConnectionState.Connected;
-          if (TRAKT_SETTINGS.UserLogins == null)
-          {
-            TRAKT_SETTINGS.UserLogins = new List<TraktAuthentication> { new TraktAuthentication { Username = Username, Password = Password } };
-          }
-        }
-      }
+      //if (!account.Password.Equals("") || !account.Username.Equals(""))
+      //{
+      //  var response = TraktAPI.Login(account.ToJSON());
+      //  if (response == null || string.IsNullOrEmpty(response.Token))
+      //  {
+      //    TestStatus = "Failed login using saved credantials";
+      //  }
+      //  else
+      //  {
+      //    TestStatus = "Successfully logged into Trakt.tv";
+      //    // save token
+      //    TraktAPI.UserToken = response.Token;
+      //    TraktAPI.Username = TRAKT_SETTINGS.Username;
+      //    TraktAPI.Password = TRAKT_SETTINGS.Password;
+      //    TRAKT_SETTINGS.AccountStatus = ConnectionState.Connected;
+      //    if (TRAKT_SETTINGS.UserLogins == null)
+      //    {
+      //      TRAKT_SETTINGS.UserLogins = new List<TraktAuthentication> { new TraktAuthentication { Username = Username, Password = Password } };
+      //    }
+      //  }
+      //}
+
+      //  var response = TraktAPI.GetOAuthToken("");
+    
+
+
+      
+
+
 
       // initialise the last sync activities 
       if (TRAKT_SETTINGS.LastSyncActivities == null) TRAKT_SETTINGS.LastSyncActivities = new TraktLastSyncActivities();

@@ -132,6 +132,8 @@
     <Compile Include="Libraries\Trakt\DataStructures\TraktNetworkApproval.cs" />
     <Compile Include="Libraries\Trakt\DataStructures\TraktNetworkFriend.cs" />
     <Compile Include="Libraries\Trakt\DataStructures\TraktNetworkUser.cs" />
+    <Compile Include="Libraries\Trakt\DataStructures\TraktOAuthLogin.cs" />
+    <Compile Include="Libraries\Trakt\DataStructures\TraktOAuthToken.cs" />
     <Compile Include="Libraries\Trakt\DataStructures\TraktPagination.cs" />
     <Compile Include="Libraries\Trakt\DataStructures\TraktPerson.cs" />
     <Compile Include="Libraries\Trakt\DataStructures\TraktPersonId.cs" />
@@ -213,6 +215,9 @@
     <Compile Include="Libraries\Trakt\Extension\StringExtensions.cs" />
     <Compile Include="Libraries\Trakt\TraktAPI.cs" />
     <Compile Include="Libraries\Trakt\TraktURIs.cs" />
+    <Compile Include="Libraries\Trakt\Web\TraktWeb.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Matches\MatchStorage.cs" />
     <Compile Include="Libraries\MovieDbV3\Data\CastItem.cs" />
     <Compile Include="Libraries\MovieDbV3\Data\CrewItem.cs" />

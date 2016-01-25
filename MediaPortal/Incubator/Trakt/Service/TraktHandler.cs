@@ -40,6 +40,7 @@ using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.DataStructures;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Enums;
 using MediaPortal.Extensions.OnlineLibraries.Libraries.Trakt.Extension;
+using MediaPortal.UiComponents.Trakt.Models;
 using MediaPortal.UI.Presentation.Players;
 using MediaPortal.UI.Presentation.Players.ResumeState;
 using MediaPortal.UI.Services.Players;
@@ -52,6 +53,8 @@ namespace MediaPortal.UiComponents.Trakt.Service
     // Defines the minimum playback progress in percent to consider a video as fully watched.
     private const int WATCHED_PERCENT = 85;
     private static readonly TimeSpan UPDATE_INTERVAL = TimeSpan.FromMinutes(10);
+    private ISettingsManager settingsManager = ServiceRegistration.Get<ISettingsManager>();
+    private TraktSettings TRAKT_SETTINGS = ServiceRegistration.Get<ISettingsManager>().Load<TraktSettings>();
 
     private class PositionWatcher
     {
@@ -63,7 +66,6 @@ namespace MediaPortal.UiComponents.Trakt.Service
     private AsynchronousMessageQueue _messageQueue;
     private readonly object _syncObj = new object();
     private readonly SettingsChangeWatcher<TraktSettings> _settings = new SettingsChangeWatcher<TraktSettings>();
-  //  private readonly TraktSettings TRAKT_SETTINGS = ServiceRegistration.Get<ISettingsManager>().Load<TraktSettings>();
     private readonly Dictionary<IPlayerSlotController, PositionWatcher> _progressUpdateWorks = new Dictionary<IPlayerSlotController, PositionWatcher>();
 
     public TraktHandler()
@@ -79,7 +81,7 @@ namespace MediaPortal.UiComponents.Trakt.Service
 
     private void ConfigureHandler()
     {
-      if (_settings.Settings.EnableTrakt && UserloggedIntoTrakt())
+      if (_settings.Settings.EnableTrakt /*&& UserloggedIntoTrakt()*/)
       {
         SubscribeToMessages();
       }
@@ -91,34 +93,29 @@ namespace MediaPortal.UiComponents.Trakt.Service
 
     private bool UserloggedIntoTrakt()
     {
-      // initialise API settings
-      TraktAPI.ApplicationId = _settings.Settings.ApplicationId;
-      TraktAPI.UserAgent = _settings.Settings.UserAgent;
-      TraktAPI.UseSSL = _settings.Settings.UseSSL;
 
-      var account = new TraktAuthentication
+      if (string.IsNullOrEmpty(TRAKT_SETTINGS.TraktOAuthToken))
       {
-        Username = _settings.Settings.Username,
-        Password = _settings.Settings.Password
-      };
-
-      if (!account.Password.Equals("") || !account.Username.Equals(""))
-      {
-        var response = TraktAPI.Login(account.ToJSON());
-        if (response == null || string.IsNullOrEmpty(response.Token))
-        {
-          TraktLogger.Warning("Failed login using saved credantials");
-          return false;
-        }
-        TraktLogger.Info("Successfully logged into Trakt.tv");
-        // save token
-        TraktAPI.UserToken = response.Token;
-        TraktAPI.Username = _settings.Settings.Username;
-        TraktAPI.Password = _settings.Settings.Password;
-        _settings.Settings.AccountStatus = ConnectionState.Connected;
-        return true;
+        TraktLogger.Error("Authorise first");
+        return false;
       }
-      return false;
+
+      var response = TraktAPI.GetOAuthToken(TRAKT_SETTINGS.TraktOAuthToken);
+      if (response == null || string.IsNullOrEmpty(response.AccessToken))
+      {
+        //TestStatus = Error
+        TraktLogger.Error("Unable to login to trakt, check log for details");
+        return false;
+      }
+
+      //TestStatus = Success
+      TRAKT_SETTINGS.TraktOAuthToken = response.RefreshToken;
+      settingsManager.Save(TRAKT_SETTINGS);
+      TraktLogger.Info("Succes login to scrobble");
+      _settings.Settings.AccountStatus = ConnectionState.Connected;
+
+      return true;
+
     }
 
     void SubscribeToMessages()
@@ -179,8 +176,46 @@ namespace MediaPortal.UiComponents.Trakt.Service
           _progressUpdateWorks[psc].ResumePosition = pos != null ? pos.ResumePosition : _progressUpdateWorks[psc].Duration;
     }
 
+    private bool CheckAccountDetails()
+    {
+      if (string.IsNullOrEmpty(TRAKT_SETTINGS.TraktOAuthToken))
+      {
+          //TestStatus = "Error";
+          TraktLogger.Error("Trakt.tv error in credentials");
+          return false;
+      }
+      return true;
+    }
+
+    private bool Login()
+    {
+      TraktLogger.Info("Exchanging refresh-token for access-token... scrobble");
+      var response = TraktAPI.GetOAuthToken(TRAKT_SETTINGS.TraktOAuthToken);
+      if (response == null || string.IsNullOrEmpty(response.AccessToken))
+      {
+        //TestStatus = Error
+        TraktLogger.Error("Unable to login to trakt, check log for details");
+        return false;
+      }
+
+      //TestStatus = Success
+      TRAKT_SETTINGS.TraktOAuthToken = response.RefreshToken;
+      settingsManager.Save(TRAKT_SETTINGS);
+      TraktLogger.Info("Succes");
+
+      return true;
+    }
+
     private void HandleScrobble(IPlayerSlotController psc, bool starting)
     {
+
+      if(!CheckAccountDetails())
+        return;
+
+      if(!Login())
+        return;
+
+
       try
       {
         IPlayerContext pc = PlayerContext.GetPlayerContext(psc);
@@ -274,8 +309,8 @@ namespace MediaPortal.UiComponents.Trakt.Service
           Title = GetMovieTitle(pc.CurrentMediaItem),
           Year = GetVideoYear(pc.CurrentMediaItem)
         },
-        AppVersion = _settings.Settings.Version,
-        AppDate = _settings.Settings.BuildDate,
+      //  AppVersion = _settings.Settings.Version,
+       // AppDate = _settings.Settings.BuildDate,
         Progress = progress
       };
 
@@ -325,8 +360,8 @@ namespace MediaPortal.UiComponents.Trakt.Service
           Title = GetSeriesTitle(pc.CurrentMediaItem),
           Year = GetVideoYear(pc.CurrentMediaItem)
         },
-        AppVersion = _settings.Settings.Version,
-        AppDate = _settings.Settings.BuildDate,
+        //AppVersion = _settings.Settings.Version,
+        //AppDate = _settings.Settings.BuildDate,
         Progress = progress
       };
 
