@@ -35,12 +35,7 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
 
     private static readonly string BIN_TRANSCODER = ServiceRegistration.Get<IFFMpegLib>().FFMpegBinaryPath;
 
-    public EncoderHandler Encoder { get; set; } 
-
-    public FFMpegTranscodeData(string workPath) : base(BIN_TRANSCODER, workPath) 
-    {
-      Encoder = EncoderHandler.Software;
-    }
+    public FFMpegTranscodeData(string workPath) : base(BIN_TRANSCODER, workPath) { }
 
     public override string TranscoderArguments
     {
@@ -63,7 +58,7 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
             {
               result.Append(arg + " ");
             }
-            result.Append("-i \"" + ((ILocalFsResourceAccessor)InputResourceAccessor).LocalFileSystemPath + "\" ");
+            result.Append("-i \"" + GetFileShortName(((ILocalFsResourceAccessor)InputResourceAccessor).LocalFileSystemPath) + "\" ");
           }
           if (string.IsNullOrEmpty(InputSubtitleFilePath) == false)
           {
@@ -71,7 +66,7 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
             {
               result.Append(arg + " ");
             }
-            result.Append("-i \"" + InputSubtitleFilePath + "\" ");
+            result.Append("-i \"" + GetFileShortName(InputSubtitleFilePath) + "\" ");
           }
           if (string.IsNullOrEmpty(OutputFilePath) == false)
           {
@@ -100,11 +95,11 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.FFMpeg
           string arg = _overrideParams;
           if (InputResourceAccessor != null)
           {
-            arg = arg.Replace("{input}", "\"" + ((ILocalFsResourceAccessor)InputResourceAccessor).LocalFileSystemPath + "\"");
+            arg = arg.Replace("{input}", "\"" + GetFileShortName(((ILocalFsResourceAccessor)InputResourceAccessor).LocalFileSystemPath) + "\"");
           }
           if (string.IsNullOrEmpty(InputSubtitleFilePath) == false)
           {
-            arg = arg.Replace("{subtitle}", "\"" + InputSubtitleFilePath) + "\"";
+            arg = arg.Replace("{subtitle}", "\"" + GetFileShortName(InputSubtitleFilePath) + "\"");
           }
           if (string.IsNullOrEmpty(OutputFilePath) == false)
           {

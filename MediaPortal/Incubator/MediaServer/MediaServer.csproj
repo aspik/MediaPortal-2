@@ -65,12 +65,14 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Aspects\DlnaItemImageAspect.cs" />
+    <Compile Include="Aspects\DlnaItemAudioAspect.cs" />
+    <Compile Include="Aspects\DlnaItemVideoAspect.cs" />
     <Compile Include="Database\MediaServer_SubSchema.cs" />
     <Compile Include="DIDL\PacketVideoDidlMessageBuilder.cs" />
     <Compile Include="DIDL\PropertyFilter.cs" />
     <Compile Include="DIDL\SamsungDidlMessageBuilder.cs" />
     <Compile Include="DIDL\SonyDidlMessageBuilder.cs" />
-    <Compile Include="DLNA\DlnaAspectMissingException.cs" />
     <Compile Include="DLNA\DlnaMediaItem.cs" />
     <Compile Include="DLNA\DlnaProtocolInfo.cs" />
     <Compile Include="DLNA\DlnaProtocolInfoFactory.cs" />
@@ -80,9 +82,12 @@
     <Compile Include="Filters\WMPContentDirectoryFilter.cs" />
     <Compile Include="Filters\XBoxContentDirectoryFilter.cs" />
     <Compile Include="MediaServerUPnPDeviceInformation.cs" />
-    <Compile Include="Metadata\DlnaAudioMetadata.cs" />
-    <Compile Include="Metadata\DlnaImageMetadata.cs" />
-    <Compile Include="Metadata\DlnaVideoMetadata.cs" />
+    <Compile Include="MetadataExtractors\DlnaImageMetadataExtractor.cs" />
+    <Compile Include="MetadataExtractors\DlnaVideoMetadataExtractor.cs" />
+    <Compile Include="MetadataExtractors\DlnaAudioMetadataExtractor.cs" />
+    <Compile Include="MetadataExtractors\Settings\DlnaAudioMetadataExtractorSettings.cs" />
+    <Compile Include="MetadataExtractors\Settings\DlnaVideoMetadataExtractorSettings.cs" />
+    <Compile Include="MetadataExtractors\Settings\DlnaImageMetadataExtractorSettings.cs" />
     <Compile Include="Objects\Basic\BasicContainer.cs" />
     <Compile Include="Objects\Basic\BasicItem.cs" />
     <Compile Include="Objects\Basic\BasicObject.cs" />
@@ -125,10 +130,7 @@
     <Compile Include="Objects\MediaLibrary\MediaLibraryAudioItem.cs" />
     <Compile Include="Objects\MediaLibrary\MediaLibraryContainer.cs" />
     <Compile Include="DIDL\ObjectRenderer.cs" />
-    <Compile Include="Objects\MediaLibrary\MediaLibraryMusicGenreContainer.cs" />
-    <Compile Include="Objects\MediaLibrary\MediaLibraryMovieGenreContainer.cs" />
-    <Compile Include="Objects\MediaLibrary\MediaLibraryMovieGenreItem.cs" />
-    <Compile Include="Objects\MediaLibrary\MediaLibraryMusicGenreItem.cs" />
+    <Compile Include="Objects\MediaLibrary\MediaLibraryGenreContainer.cs" />
     <Compile Include="Objects\MediaLibrary\MediaLibraryHelper.cs" />
     <Compile Include="Objects\MediaLibrary\MediaLibraryImageItem.cs" />
     <Compile Include="Objects\MediaLibrary\MediaLibraryItem.cs" />
@@ -205,7 +207,6 @@
       <Listener>True</Listener>
     </Antlr4>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="build.targets" />
   <PropertyGroup>

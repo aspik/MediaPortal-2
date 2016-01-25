@@ -66,7 +66,7 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.Base
     {
       bool notChanged = true;
       notChanged &= video.TargetForceVideoTranscoding == false;
-      notChanged &= (video.TargetSubtitleSupport == SubtitleSupport.None || video.SourceSubtitleAvailable == false || (video.TargetSubtitleSupport == SubtitleSupport.HardCoded && supportHardcodedSubs == false));
+      notChanged &= (video.TargetSubtitleSupport == SubtitleSupport.None || video.SourceSubtitle == null || (video.TargetSubtitleSupport == SubtitleSupport.HardCoded && supportHardcodedSubs == false));
       notChanged &= (video.TargetVideoCodec == VideoCodec.Unknown || video.TargetVideoCodec == video.SourceVideoCodec);
       notChanged &= IsVideoDimensionChanged(video) == false;
       notChanged &= video.TargetVideoBitrate <= 0;
@@ -128,12 +128,32 @@ namespace MediaPortal.Plugins.Transcoding.Service.Transcoders.Base
       return notChanged == false;
     }
 
-    internal static bool IsTranscodingRunning(string transcodeID, ref Dictionary<string, List<TranscodeContext>>  runningTranscodes)
+    internal static bool IsTranscodingRunning(string transcodeID, ref Dictionary<string, TranscodeContext>  runningTranscodes)
     {
       lock (runningTranscodes)
       {
         return runningTranscodes.ContainsKey(transcodeID);
       }
     }
+
+    #region HW Acceleration
+
+    internal static bool IsNvidiaHWTranscode(string transcodeId, List<string> nvidiaTranscodes)
+    {
+      lock (nvidiaTranscodes)
+      {
+        return nvidiaTranscodes.Contains(transcodeId);
+      }
+    }
+
+    internal static bool IsIntelHWTranscode(string transcodeId, List<string> intelTranscodes)
+    {
+      lock (intelTranscodes)
+      {
+        return intelTranscodes.Contains(transcodeId);
+      }
+    }
+
+    #endregion
   }
 }

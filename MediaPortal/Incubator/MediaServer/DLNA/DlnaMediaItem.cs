@@ -28,19 +28,19 @@ using System.Linq;
 using System.Text;
 using MediaPortal.Extensions.MediaServer.Profiles;
 using MediaPortal.Common.MediaManagement;
+using MediaPortal.Extensions.MediaServer.Aspects;
 using MediaPortal.Common.ResourceAccess;
 using MediaPortal.Common.MediaManagement.DefaultItemAspects;
 using System.Diagnostics;
 using MediaPortal.Common;
 using MediaPortal.Common.Logging;
+using MediaPortal.Extensions.MediaServer.MetadataExtractors;
 using System.IO;
 using System.Threading;
 using MediaPortal.Extensions.MediaServer.Objects.MediaLibrary;
 using System.Globalization;
 using MediaPortal.Plugins.Transcoding.Service;
 using System.Drawing;
-using MediaPortal.Plugins.Transcoding.Aspects;
-using MediaPortal.Extensions.MediaServer.Metadata;
 
 namespace MediaPortal.Extensions.MediaServer.DLNA
 {
@@ -53,30 +53,30 @@ namespace MediaPortal.Extensions.MediaServer.DLNA
       if (item.Aspects.ContainsKey(AudioAspect.ASPECT_ID))
       {
         IsAudio = true;
-        if (item.Aspects.ContainsKey(TranscodeItemAudioAspect.ASPECT_ID) == false)
+        if (item.Aspects.ContainsKey(DlnaItemAudioAspect.ASPECT_ID) == false)
         {
-          throw new DlnaAspectMissingException(string.Format("Mediaitem {0} contains no transcoding audio information", item.MediaItemId));
+          throw new InvalidOperationException(string.Format("Mediaitem {0} contains no DLNA audio information", item.MediaItemId));
         }
       }
       else if (item.Aspects.ContainsKey(ImageAspect.ASPECT_ID))
       {
         IsImage = true;
-        if (item.Aspects.ContainsKey(TranscodeItemImageAspect.ASPECT_ID) == false)
+        if (item.Aspects.ContainsKey(DlnaItemImageAspect.ASPECT_ID) == false)
         {
-          throw new DlnaAspectMissingException(string.Format("Mediaitem {0} contains no transcoding image information", item.MediaItemId));
+          throw new InvalidOperationException(string.Format("Mediaitem {0} contains no DLNA image information", item.MediaItemId));
         }
       }
       else if (item.Aspects.ContainsKey(VideoAspect.ASPECT_ID))
       {
         IsVideo = true;
-        if (item.Aspects.ContainsKey(TranscodeItemVideoAspect.ASPECT_ID) == false)
+        if (item.Aspects.ContainsKey(DlnaItemVideoAspect.ASPECT_ID) == false)
         {
-          throw new DlnaAspectMissingException(string.Format("Mediaitem {0} contains no transcoding video information", item.MediaItemId));
+          throw new InvalidOperationException(string.Format("Mediaitem {0} contains no DLNA video information", item.MediaItemId));
         }
       }
       else
       {
-        throw new DlnaAspectMissingException(string.Format("Mediaitem {0} contains no requied aspect information", item.MediaItemId));
+        throw new InvalidOperationException(string.Format("Mediaitem {0} contains no requied aspect information", item.MediaItemId));
       }
 
       Client = client;
@@ -87,18 +87,23 @@ namespace MediaPortal.Extensions.MediaServer.DLNA
       MetadataContainer info = null;
       if (IsAudio)
       {
-        info = DlnaAudioMetadata.ParseMediaItem(item);
+        info = DlnaAudioMetadataExtractor.ParseMediaItem(item);
       }
       else if (IsImage)
       {
-        info = DlnaImageMetadata.ParseMediaItem(item);
+        info = DlnaImageMetadataExtractor.ParseMediaItem(item);
       }
       else if (IsVideo)
       {
-        info = DlnaVideoMetadata.ParseMediaItem(item);
+        info = DlnaVideoMetadataExtractor.ParseMediaItem(item);
       }
 
       IsSubtitled = false;
+      if (info.Subtitles.Count == 0)
+      {
+        DlnaVideoMetadataExtractor.AddExternalSubtitles(ref info);
+      }
+      if (info.Subtitles.Count > 0) IsSubtitled = true;
       
       if (MediaServerPlugin.TranscodingAllowed == true)
       {
@@ -254,7 +259,6 @@ namespace MediaPortal.Extensions.MediaServer.DLNA
             {
               video.SourceAudioCodec = info.Audio[srcVideo.MatchedAudioStream].Codec;
             }
-            video.SourceSubtitles = new List<SubtitleStream>(info.Subtitles);
 
             if (info.Video.Bitrate > 0)
             {
@@ -572,8 +576,6 @@ namespace MediaPortal.Extensions.MediaServer.DLNA
           DlnaMetadata.Video.PixelFormatType = metadata.TargetVideoPixelFormat;
           DlnaMetadata.Video.TimestampType = metadata.TargetVideoTimestamp;
           DlnaMetadata.Video.Width = metadata.TargetVideoMaxWidth;
-
-          IsSubtitled = metadata.TargetSubtitled;
         }
       }
 
@@ -628,8 +630,7 @@ namespace MediaPortal.Extensions.MediaServer.DLNA
         {
           if (MediaConverter.RunningTranscodes.ContainsKey(TranscodingParameter.TranscodeId))
           {
-            for (int transcodeNo = 0; transcodeNo < MediaConverter.RunningTranscodes[TranscodingParameter.TranscodeId].Count; transcodeNo++)
-              MediaConverter.RunningTranscodes[TranscodingParameter.TranscodeId][transcodeNo].Stop();
+            MediaConverter.RunningTranscodes[TranscodingParameter.TranscodeId].Stop();
           }
         }
       }

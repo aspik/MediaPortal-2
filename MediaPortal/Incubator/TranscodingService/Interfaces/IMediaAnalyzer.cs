@@ -45,6 +45,16 @@ namespace MediaPortal.Plugins.Transcoding.Service.Interfaces
     int AnalyzerMaximumThreads { get; set; }
 
     /// <summary>
+    /// Sets or gets the default encoding for the Subtitle
+    /// </summary>
+    string SubtitleDefaultEncoding { get; set; }
+
+    /// <summary>
+    /// Sets or gets the default language to use for Subtitles
+    /// </summary>
+    string SubtitleDefaultLanguage { get; set; }
+
+    /// <summary>
     /// Sets or gets the logger implementation to use for logging.
     /// </summary>
     ILogger Logger { get; set; }
@@ -62,5 +72,11 @@ namespace MediaPortal.Plugins.Transcoding.Service.Interfaces
     /// <param name="streamLink">INetworkResourceAccessor to the file</param>
     /// <returns>a Metadata Container with all information about the URL</returns>
     MetadataContainer ParseStream(INetworkResourceAccessor streamLink);
+
+    /// <summary>
+    /// Gets available external subtitles for the file
+    /// </summary>
+    /// <param name="lfsra">ILocalFsResourceAccessor to the file</param>
+    List<SubtitleStream> ParseFileExternalSubtitles(ILocalFsResourceAccessor lfsra);
   }
 }

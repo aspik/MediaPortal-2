@@ -25,39 +25,40 @@
 using System.Collections.Generic;
 using MediaPortal.Common.Settings;
 
-namespace MediaPortal.Plugins.Transcoding.MetadataExtractors.Settings
+namespace MediaPortal.Extensions.MediaServer.MetadataExtractors.Settings
 {
-  public class TranscodeAudioMetadataExtractorSettings
+  public class DlnaVideoMetadataExtractorSettings
   {
-    protected readonly static List<string> DEFAULT_AUDIO_FILE_EXTENSIONS = new List<string>
+    // Don't add .ifo here because they are processed while processing the video DVD directory
+    protected readonly static List<string> DEFAULT_VIDEO_FILE_EXTENSIONS = new List<string>
       {
-          ".ape",
-          ".flac",
-          ".mp3",
-          ".ogg",
-          ".wv",
-          ".wav",
-          ".wma",
+          ".mkv",
+          ".mk3d",
+          ".ogm",
+          ".avi",
+          ".wmv",
+          ".mpg",
           ".mp4",
-          ".m4a",
-          ".m4p",
-          ".mpc",
-          ".mp+",
-          ".mpp",
-          ".dsf",
-          ".dff",
+          ".m4v",
+          ".ts",
+          ".flv",
+          ".m2ts",
+          ".mts",
+          ".mov",
+          ".wtv",
+          ".dvr-ms",
       };
 
-    protected List<string> _audioExtensions = new List<string>(DEFAULT_AUDIO_FILE_EXTENSIONS);
+    protected List<string> _videoFileExtensions = new List<string>(DEFAULT_VIDEO_FILE_EXTENSIONS);
 
     /// <summary>
-    /// Audio extensions for which the <see cref="TranscodeAudioMetadataExtractor"/> should be used.
+    /// Video extensions for which the <see cref="VideoMetadataExtractor"/> should be used.
     /// </summary>
     [Setting(SettingScope.Global)]
-    public List<string> AudioExtensions
+    public List<string> VideoFileExtensions
     {
-      get { return _audioExtensions; }
-      set { _audioExtensions = value; }
+      get { return _videoFileExtensions; }
+      set { _videoFileExtensions = value; }
     }
   }
 }

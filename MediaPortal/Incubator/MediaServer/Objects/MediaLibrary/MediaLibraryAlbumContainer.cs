@@ -35,7 +35,6 @@ using MediaPortal.Common.MediaManagement.MLQueries;
 using MediaPortal.Extensions.MediaServer.Objects.Basic;
 using MediaPortal.Extensions.MediaServer.Tree;
 using MediaPortal.Extensions.MediaServer.Profiles;
-using MediaPortal.Plugins.Transcoding.Aspects;
 
 namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
 {
@@ -44,9 +43,6 @@ namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
     protected Guid ObjectId { get; set; }
     protected string BaseKey { get; set; }
 
-    private bool _initialised = false;
-    private Dictionary<string, MediaLibraryAlbumItem> _albumDictionary = new Dictionary<string, MediaLibraryAlbumItem>();
-
     public MediaLibraryAlbumContainer(string id, EndPointSettings client)
       : base(id, client)
     {
@@ -54,35 +50,14 @@ namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
       ObjectId = MediaLibraryHelper.GetObjectId(id);
     }
 
-    public override void Initialise()
-    {
-      HomogenousMap items = Albums();
-      foreach (var item in items)
-      {
-        try
-        {
-          string title = (string)item.Key;
-          if (title == null)
-            title = "<Unknown>";
-          string key = Id + ":" + title;
-
-          _albumDictionary.Add(key, new MediaLibraryAlbumItem(key, title, Client));
-          _initialised = true;
-        }
-        catch (Exception e)
-        {
-          ServiceRegistration.Get<ILogger>().Error("Music genre initialise failed", e);
-        }
-      }
-    }
-
     public override int ChildCount
     {
       get
       {
-        if (!_initialised) Initialise();
-        return ChildCount = _albumDictionary.Count;
+        // This is some what inefficient
+        return ChildCount = Albums().Count;
       }
+      set { }
     }
 
     public override TreeNode<object> FindNode(string key)
@@ -90,10 +65,8 @@ namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
       if (!key.StartsWith(Key)) return null;
       if (key == Key) return this;
 
-      if (!_initialised) Initialise();
-      MediaLibraryAlbumItem container;
-      _albumDictionary.TryGetValue(key, out container);
-      return container;
+      ServiceRegistration.Get<ILogger>().Error("No idea how to find " + key);
+      return null;
     }
 
     private HomogenousMap Albums()
@@ -101,7 +74,7 @@ namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
         var necessaryMiaTypeIDs = new Guid[]
                                   {
                                     MediaAspect.ASPECT_ID,
-                                    TranscodeItemAudioAspect.ASPECT_ID
+                                    AudioAspect.ASPECT_ID,
                                   };
         var library = ServiceRegistration.Get<IMediaLibrary>();
 
@@ -110,25 +83,27 @@ namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
 
     public override List<IDirectoryObject> Search(string filter, string sortCriteria)
     {
-      if (!_initialised) Initialise();
+      var parent = new BasicContainer(Id, Client);
+	  HomogenousMap items = Albums();
       var result = new List<IDirectoryObject>();
-      foreach (var item in _albumDictionary.Values)
-      {
-        try
-        {
-          string key = (string)item.Key;
-          if (key == null)
-            key = "<Unknown>";
-
-          item.Initialise();
-          result.Add(item);
-        }
-        catch (Exception e)
-        {
-          ServiceRegistration.Get<ILogger>().Error("Album search failed", e);
-        }
-      }
-      return result;
+	  foreach(var item in items)
+	  {
+	      try
+	      {
+              //ServiceRegistration.Get<ILogger>().Info("Item {0}={1}", item.Key, item.Value);
+              object title = item.Key;
+              if (title == null)
+                  title = "<no name>";
+              MediaLibraryAlbumItem album = new MediaLibraryAlbumItem(item.Key as string, title as string, Client);
+              album.Initialise();
+              result.Add(album);
+	      }
+	      catch (Exception e)
+	      {
+	        ServiceRegistration.Get<ILogger>().Error("Album search failed", e);
+	      }
+	  }
+	  return result;
     }
   }
 }

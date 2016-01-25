@@ -34,8 +34,7 @@ using MediaPortal.Common.MediaManagement.MLQueries;
 using MediaPortal.Extensions.MediaServer.Objects.Basic;
 using MediaPortal.Extensions.MediaServer.Tree;
 using MediaPortal.Extensions.MediaServer.Profiles;
-using MediaPortal.Utilities;
-using MediaPortal.Plugins.Transcoding.Aspects;
+using MediaPortal.Extensions.MediaServer.Aspects;
 
 namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
 {
@@ -56,69 +55,23 @@ namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
 
     public override string Class
     {
-      get { return "object.container.album.musicAlbum"; }
+        get { return "object.container.album.musicAlbum"; }
     }
 
     public override void Initialise()
     {
       Title = _title;
-      IList<MediaItem> items = GetTracks();
-      if (items != null && items.Count > 0)
-      {
-        MediaItem item = items[0];
-        Genre = new List<string>();
-        Artist = new List<string>();
-        Contributor = new List<string>();
-
-        if (Client.Profile.Settings.Metadata.Delivery == MetadataDelivery.All)
-        {
-          MediaItemAspect audioAspect;
-          if (item.Aspects.TryGetValue(AudioAspect.ASPECT_ID, out audioAspect))
-          {
-            // TODO: the attribute is defined as IEnumerable<string>, why is it here IEnumerable<object>???
-            var genreObj = audioAspect.GetCollectionAttribute<object>(AudioAspect.ATTR_GENRES);
-            if (genreObj != null)
-              CollectionUtils.AddAll(Genre, genreObj.Cast<string>());
-
-            var artistObj = audioAspect.GetCollectionAttribute<object>(AudioAspect.ATTR_ALBUMARTISTS);
-            if (artistObj != null)
-              CollectionUtils.AddAll(Artist, artistObj.Cast<string>());
-
-            var composerObj = audioAspect.GetCollectionAttribute<object>(AudioAspect.ATTR_COMPOSERS);
-            if (composerObj != null)
-              CollectionUtils.AddAll(Contributor, composerObj.Cast<string>());
-          }
-        }
-
-        //Support alternative ways to get album art
-        var albumArt = new MediaLibraryAlbumArt(item, Client);
-        if (albumArt != null)
-        {
-          albumArt.Initialise();
-          if (Client.Profile.Settings.Thumbnails.Delivery == ThumbnailDelivery.All || Client.Profile.Settings.Thumbnails.Delivery == ThumbnailDelivery.Resource)
-          {
-            var albumResource = new MediaLibraryAlbumArtResource(albumArt);
-            albumResource.Initialise();
-            Resources.Add(albumResource);
-          }
-          if (Client.Profile.Settings.Thumbnails.Delivery == ThumbnailDelivery.All || Client.Profile.Settings.Thumbnails.Delivery == ThumbnailDelivery.AlbumArt)
-          {
-            AlbumArtUrl = albumArt.Uri;
-          }
-        }
-      }
     }
 
     private IList<MediaItem> GetTracks()
     {
       var necessaryMiaTypeIDs = new Guid[] {
                                     MediaAspect.ASPECT_ID,
-                                    AudioAspect.ASPECT_ID,
-                                    TranscodeItemAudioAspect.ASPECT_ID,
-                                    ProviderResourceAspect.ASPECT_ID
+                                    AudioAspect.ASPECT_ID
                                   };
       var optionalMIATypeIDs = new Guid[]
                                  {
+                                   DlnaItemAudioAspect.ASPECT_ID,
                                  };
       IMediaLibrary library = ServiceRegistration.Get<IMediaLibrary>();
 
@@ -132,6 +85,7 @@ namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
     public override int ChildCount
     {
       get { return GetTracks().Count; }
+      set { }
     }
 
     public override TreeNode<object> FindNode(string key)
@@ -139,6 +93,7 @@ namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
       if (!key.StartsWith(Key)) return null;
       if (key == Key) return this;
 
+      ServiceRegistration.Get<ILogger>().Error("No idea how to find " + key);
       return null;
     }
 
@@ -148,9 +103,9 @@ namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
 
       try
       {
-        var parent = new BasicContainer(Id, Client);
         IList<MediaItem> items = GetTracks();
-        result.AddRange(items.Select(item => MediaLibraryHelper.InstansiateMediaLibraryObject(item, BaseKey, parent)));
+
+        result.AddRange(items.Select(item => MediaLibraryHelper.InstansiateMediaLibraryObject(item, BaseKey, (BasicContainer)this.Parent)));
       }
       catch (Exception e)
       {
@@ -168,10 +123,11 @@ namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
     public string Date { get; set; }
     public string Relation { get; set; }
     public IList<string> Rights { get; set; }
-    public IList<string> Artist { get; set; }
-    public IList<string> Genre { get; set; }
-    public IList<string> Producer { get; set; }
-    public string AlbumArtUrl { get; set; }
-    public string Toc { get; set; }
+
+      public IList<string> Artist { get; set; }
+      public IList<string> Genre { get; set; }
+      public IList<string> Producer { get; set; }
+      public string AlbumArtUrl { get; set; }
+      public string Toc { get; set; }
   }
 }

@@ -42,6 +42,8 @@ using MediaPortal.Utilities.Network;
 using MediaPortal.Common.Services.ResourceAccess.StreamedResourceToLocalFsAccessBridge;
 using System.IO;
 using MediaPortal.Extensions.MediaServer.Profiles;
+using MediaPortal.Extensions.MediaServer.Aspects;
+using MediaPortal.Extensions.MediaServer.MetadataExtractors;
 
 namespace MediaPortal.Extensions.MediaServer.Objects.MediaLibrary
 {

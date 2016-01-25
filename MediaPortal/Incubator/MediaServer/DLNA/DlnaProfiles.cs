@@ -22,6 +22,7 @@
 
 #endregion
 
+using MediaPortal.Extensions.MediaServer.MetadataExtractors;
 using MediaPortal.Extensions.MediaServer.Profiles;
 using MediaPortal.Plugins.Transcoding.Service;
 using System;

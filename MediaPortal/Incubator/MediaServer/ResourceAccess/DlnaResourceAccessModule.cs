@@ -67,7 +67,7 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
     private string _serverOsVersion = null;
     private string _product = null;
     private Dictionary<string, Guid> _lastMediaItem = new Dictionary<string, Guid>();
-    private Dictionary<string, Dictionary<string, List<TranscodeContext>>> _currentClientTranscodes = new Dictionary<string, Dictionary<string, List<TranscodeContext>>>();
+    private Dictionary<string, TranscodeContext> _lastClientTranscode = new Dictionary<string, TranscodeContext>();
     private MediaConverter _transcoder = new MediaConverter();
 
     protected enum StreamMode
@@ -96,7 +96,22 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
       _product = "MediaPortal 2 DLNA Server/" + AssemblyName.GetAssemblyName(assembly.Location).Version.ToString(2);
 
       _transcoder.Logger = Logger;
-
+      _transcoder.TranscoderCachePath = MediaServerPlugin.TranscoderCachePath;
+      _transcoder.TranscoderTimeout = MediaServerPlugin.TranscoderTimeout;
+      _transcoder.HLSSegmentFileTemplate = MediaServerPlugin.HLSSegmentFileTemplate;
+      _transcoder.HLSSegmentTimeInSeconds = MediaServerPlugin.HLSSegmentTimeInSeconds;
+      _transcoder.TranscoderMaximumCacheAge = MediaServerPlugin.TranscodeMaximumCacheAgeInDays;
+      _transcoder.TranscoderMaximumCacheSize = MediaServerPlugin.TranscoderMaximumCacheSizeInGB;
+      _transcoder.TranscoderMaximumThreads = MediaServerPlugin.TranscoderMaximumThreads;
+      _transcoder.SubtitleDefaultEncoding = MediaServerPlugin.SubtitleDefaultEncoding;
+      _transcoder.AllowIntelHWAcceleration = MediaServerPlugin.IntelHWAccelerationAllowed;
+      _transcoder.MaximumIntelHWStreams = MediaServerPlugin.IntelHWMaximumStreams;
+      _transcoder.SupportedIntelHWCodecs.Clear();
+      _transcoder.SupportedIntelHWCodecs.AddRange(MediaServerPlugin.NvidiaHWSupportedCodecs);
+      _transcoder.AllowNvidiaHWAcceleration = MediaServerPlugin.NvidiaHWAccelerationAllowed;
+      _transcoder.MaximumNvidiaHWStreams = MediaServerPlugin.NvidiaHWMaximumStreams;
+      _transcoder.SupportedNvidiaHWCodecs.Clear();
+      _transcoder.SupportedNvidiaHWCodecs.AddRange(MediaServerPlugin.NvidiaHWSupportedCodecs);
       ClearCache();
     }
 
@@ -123,11 +138,7 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
 
       public long Length
       {
-        get 
-        {
-          if (_to <= _from) return 0;
-          return _to - _from; 
-        }
+        get { return _to - _from + 1; }
       }
     }
 
@@ -181,20 +192,15 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
 
     private long GetStreamSize(DlnaMediaItem dlnaItem)
     {
-      long length = dlnaItem.DlnaMetadata.Metadata.Size;
-      if (dlnaItem.IsTranscoding == true || length <= 0)
-      {
-        if (dlnaItem.IsAudio) return TRANSCODED_AUDIO_STREAM_MAX;
-        else if (dlnaItem.IsImage) return TRANSCODED_IMAGE_STREAM_MAX;
-        else if (dlnaItem.IsVideo) return TRANSCODED_VIDEO_STREAM_MAX;
-        return TRANSCODED_VIDEO_STREAM_MAX;
-      }
-      return length;
+      if (dlnaItem.IsAudio) return TRANSCODED_AUDIO_STREAM_MAX;
+      else if (dlnaItem.IsImage) return TRANSCODED_IMAGE_STREAM_MAX;
+      else if (dlnaItem.IsVideo) return TRANSCODED_VIDEO_STREAM_MAX;
+      return TRANSCODED_VIDEO_STREAM_MAX;
     }
 
     protected IList<Range> ParseTimeRanges(string timeRangesSpecifier, double duration)
     {
-      if (string.IsNullOrEmpty(timeRangesSpecifier))
+      if (string.IsNullOrEmpty(timeRangesSpecifier) || duration == 0)
         return null;
       IList<Range> result = new List<Range>();
       try
@@ -207,16 +213,12 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
             if (tokens.Length != 2)
               return new Range[] { };
             if (!string.IsNullOrEmpty(tokens[0]))
-            {
               if (!string.IsNullOrEmpty(tokens[1]))
                 result.Add(new Range(Convert.ToInt64(TimeSpan.Parse(tokens[0], CultureInfo.InvariantCulture).TotalSeconds), Convert.ToInt64(TimeSpan.Parse(tokens[1], CultureInfo.InvariantCulture).TotalSeconds)));
               else
-                result.Add(new Range(Convert.ToInt64(TimeSpan.Parse(tokens[0], CultureInfo.InvariantCulture).TotalSeconds), Convert.ToInt64(duration)));
-            }
+                result.Add(new Range(Convert.ToInt64(TimeSpan.Parse(tokens[0], CultureInfo.InvariantCulture).TotalSeconds), Convert.ToInt64(duration) - 1));
             else
-            {
-              result.Add(new Range(Math.Max(0, Convert.ToInt64(duration) - Convert.ToInt64(TimeSpan.Parse(tokens[1], CultureInfo.InvariantCulture).TotalSeconds)), Convert.ToInt64(duration)));
-            }
+              result.Add(new Range(Math.Max(0, Convert.ToInt64(duration) - Convert.ToInt64(TimeSpan.Parse(tokens[1], CultureInfo.InvariantCulture).TotalSeconds)), Convert.ToInt64(duration) - 1));
           }
       }
       catch (Exception e)
@@ -229,7 +231,7 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
 
     protected IList<Range> ParseByteRanges(string byteRangesSpecifier, long size)
     {
-      if (string.IsNullOrEmpty(byteRangesSpecifier))
+      if (string.IsNullOrEmpty(byteRangesSpecifier) || size == 0)
         return null;
       IList<Range> result = new List<Range>();
       try
@@ -242,16 +244,12 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
             if (tokens.Length != 2)
               return new Range[] { };
             if (!string.IsNullOrEmpty(tokens[0]))
-            {
               if (!string.IsNullOrEmpty(tokens[1]))
                 result.Add(new Range(long.Parse(tokens[0]), long.Parse(tokens[1])));
               else
-                result.Add(new Range(long.Parse(tokens[0]), size));
-            }
+                result.Add(new Range(long.Parse(tokens[0]), size - 1));
             else
-            {
-              result.Add(new Range(Math.Max(0, size - long.Parse(tokens[1])), size));
-            }
+              result.Add(new Range(Math.Max(0, size - long.Parse(tokens[1])), size - 1));
           }
       }
       catch (Exception e)
@@ -260,85 +258,6 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
         // As specified in RFC2616, section 14.35.1, ignore invalid range header
       }
       return result;
-    }
-
-    protected Range ConvertToByteRange(Range timeRange, DlnaMediaItem item)
-    {
-      if (timeRange.Length <= 0.0)
-      {
-        return new Range(0, item.DlnaMetadata.Metadata.Size);
-      }
-      long startByte = 0;
-      long endByte = 0;
-      if (item.IsTranscoding == true)
-      {
-        long length = GetStreamSize(item);
-        double factor = Convert.ToDouble(length) / item.DlnaMetadata.Metadata.Duration;
-        startByte = Convert.ToInt64(Convert.ToDouble(timeRange.From) * factor);
-        endByte = Convert.ToInt64(Convert.ToDouble(timeRange.To) * factor);
-      }
-      else
-      {
-        double bitrate = 0;
-        if (item.IsSegmented == false)
-        {
-          bitrate = Convert.ToDouble(item.DlnaMetadata.Metadata.Bitrate) * 1024; //Bitrate in bits/s
-        }
-        startByte = Convert.ToInt64((bitrate * timeRange.From) / 8.0);
-        endByte = Convert.ToInt64((bitrate * timeRange.To) / 8.0);
-      }
-      return new Range(startByte, endByte);
-    }
-
-    protected Range ConvertToTimeRange(Range byteRange, DlnaMediaItem item)
-    {
-      if (byteRange.Length <= 0.0)
-      {
-        return new Range(0, Convert.ToInt64(item.DlnaMetadata.Metadata.Duration));
-      }
-
-      double startSeconds = 0;
-      double endSeconds = 0;
-      if (item.IsTranscoding == true)
-      {
-        long length = GetStreamSize(item);
-        double factor = item.DlnaMetadata.Metadata.Duration / Convert.ToDouble(length);
-        startSeconds = Convert.ToDouble(byteRange.From) * factor;
-        endSeconds = Convert.ToDouble(byteRange.To) * factor;
-      }
-      else
-      {
-        double bitrate = 0;
-        if (item.IsSegmented == false)
-        {
-          bitrate = Convert.ToDouble(item.DlnaMetadata.Metadata.Bitrate) * 1024; //Bitrate in bits/s
-        }
-        if (bitrate > 0)
-        {
-          startSeconds = Convert.ToDouble(byteRange.From) / (bitrate / 8.0);
-          endSeconds = Convert.ToDouble(byteRange.To) / (bitrate / 8.0);
-        }
-      }
-      return new Range(Convert.ToInt64(startSeconds), Convert.ToInt64(endSeconds));
-    }
-
-    protected Range ConvertToFileRange(Range requestedByteRange, DlnaMediaItem item, long length)
-    {
-      long toRange = requestedByteRange.To;
-      long fromRange = requestedByteRange.From;
-      if (toRange <= 0 || toRange > length)
-      {
-        toRange = length;
-      }
-      if (item.IsSegmented == false && item.IsTranscoding == true)
-      {
-        if (item.DlnaMetadata.Metadata.Size > 0 && (toRange > item.DlnaMetadata.Metadata.Size || fromRange > item.DlnaMetadata.Metadata.Size))
-        {
-          fromRange = Convert.ToInt64((Convert.ToDouble(fromRange) / Convert.ToDouble(length)) * Convert.ToDouble(item.DlnaMetadata.Metadata.Size));
-          toRange = Convert.ToInt64((Convert.ToDouble(toRange) / Convert.ToDouble(length)) * Convert.ToDouble(item.DlnaMetadata.Metadata.Size));
-        }
-      }
-      return new Range(fromRange, toRange);
     }
 
     public override bool Process(IHttpRequest request, IHttpResponse response, IHttpSession session)
@@ -450,18 +369,18 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
           bool subUseLocal = false;
           if (dlnaItem.IsSubtitled)
           {
-            subUseLocal = DlnaResourceAccessUtils.FindSubtitle(deviceClient, out subTargetCodec, out subTargetMime);
+            subUseLocal = DlnaResourceAccessUtils.FindSubtitle(dlnaItem.MediaSource, deviceClient, out subSource, out subTargetCodec, out subTargetMime);
             if (dlnaItem.IsTranscoded && dlnaItem.IsVideo)
             {
               VideoTranscoding video = (VideoTranscoding)dlnaItem.TranscodingParameter;
+              video.SourceSubtitle = subSource;
               video.TargetSubtitleCodec = subTargetCodec;
-              video.TargetSubtitleLanguages = deviceClient.PreferredSubtitleLanguages;
             }
             else if (dlnaItem.IsVideo)
             {
               VideoTranscoding subtitle = (VideoTranscoding)dlnaItem.SubtitleTranscodingParameter;
+              subtitle.SourceSubtitle = subSource;
               subtitle.TargetSubtitleCodec = subTargetCodec;
-              subtitle.TargetSubtitleLanguages = deviceClient.PreferredSubtitleLanguages;
             }
           }
 
@@ -631,17 +550,56 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
             {
               resourceStream = _transcoder.GetReadyFileBuffer((ILocalFsResourceAccessor)dlnaItem.DlnaMetadata.Metadata.Source);
             }
+            if (resourceStream == null)
+            {
+              TranscodeContext context = _transcoder.GetMediaStream(dlnaItem.TranscodingParameter, true);
+              dlnaItem.SegmentDir = context.SegmentDir;
+              resourceStream = context.TranscodedStream;
+              lock (_lastClientTranscode)
+              {
+                if (_lastClientTranscode.ContainsKey(clientId) == false)
+                {
+                  _lastClientTranscode.Add(clientId, context);
+                }
+                else
+                {
+                  if (_lastClientTranscode[clientId].Running == true && _lastClientTranscode[clientId] != context)
+                  {
+                    //Don't waste resources on transcoding if the client wants different media item
+                    _lastClientTranscode[clientId].Stop();
+                  }
+                  _lastClientTranscode[clientId] = context;
+                }
+              }
+            }
+
+            if (resourceStream == null)
+            {
+              response.Status = HttpStatusCode.InternalServerError;
+              response.Chunked = false;
+              response.ContentLength = 0;
+              response.ContentType = null;
+#if DEBUG
+              Logger.Debug("DlnaResourceAccessModule: Sending headers: " + response.SendHeaders());
+#else
+                response.SendHeaders();
+#endif
+              return true;
+            }
+
+            if (dlnaItem.IsStreamable == false)
+            {
+              Logger.Debug("DlnaResourceAccessModule: Live transcoding of mediaitem {0} is not possible because of media container", mediaItemGuid.ToString());
+            }
 
             IList<Range> ranges = null;
-            Range timeRange = null;
-            Range byteRange = null;
             if (requestedStreamingMode == StreamMode.TimeRange)
             {
               double duration = dlnaItem.DlnaMetadata.Metadata.Duration;
               if (dlnaItem.IsSegmented)
               {
                 //Is this possible?
-                duration = _transcoder.HLSSegmentTimeInSeconds;
+                duration = MediaServerPlugin.HLSSegmentTimeInSeconds;
               }
               ranges = ParseTimeRanges(byteRangesSpecifier, duration);
               if (ranges == null || ranges.Count != 1)
@@ -661,10 +619,9 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
             }
             else if (requestedStreamingMode == StreamMode.ByteRange)
             {
-              long lSize = GetStreamSize(dlnaItem);
+              long lSize = dlnaItem.IsTranscoding ? GetStreamSize(dlnaItem) : resourceStream.Length;
               if (dlnaItem.IsSegmented)
               {
-                //TODO: Check if this is works
                 lSize = resourceStream.Length;
               }
               ranges = ParseByteRanges(byteRangesSpecifier, lSize);
@@ -700,83 +657,6 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
 #endif
                 return true;
               }
-            }
-            if (ranges != null && ranges.Count == 1)
-            {
-              if (requestedStreamingMode == StreamMode.ByteRange)
-              {
-                byteRange = ranges[0];
-                timeRange = ConvertToTimeRange(ranges[0], dlnaItem);
-              }
-              else if (requestedStreamingMode == StreamMode.TimeRange)
-              {
-                timeRange = ranges[0];
-                byteRange = ConvertToByteRange(ranges[0], dlnaItem);
-              }
-            }
-            if (timeRange == null)
-            {
-              timeRange = new Range(0, 0);
-            }
-            if (byteRange == null)
-            {
-              byteRange = new Range(0, 0);
-            }
-            bool partialResource = false;
-            TranscodeContext context = null;
-            if (resourceStream == null)
-            {
-              context = _transcoder.GetMediaStream(dlnaItem.TranscodingParameter, timeRange.From, timeRange.Length, true);
-              partialResource = context.Partial;
-              dlnaItem.SegmentDir = context.SegmentDir;
-              resourceStream = context.TranscodedStream;
-              if (dlnaItem.IsTranscoding == false || (context.Partial == false && context.TargetFileSize > 0 && context.TargetFileSize > dlnaItem.DlnaMetadata.Metadata.Size))
-              {
-                dlnaItem.DlnaMetadata.Metadata.Size = context.TargetFileSize;
-              }
-
-              lock (_currentClientTranscodes)
-              {
-                if (_currentClientTranscodes.ContainsKey(clientId) == false)
-                {
-                  _currentClientTranscodes.Add(clientId, new Dictionary<string, List<TranscodeContext>>());
-                }
-                if(_currentClientTranscodes[clientId].Count > 0 && _currentClientTranscodes[clientId].ContainsKey(dlnaItem.TranscodingParameter.TranscodeId) == false)
-                {
-                  //Don't waste resources on transcoding if the client wants different media item
-                  Logger.Debug("DlnaResourceAccessModule: Ending {0} transcodes for client {1}", _currentClientTranscodes[clientId].Count, clientId);
-                  foreach(var transcodeContexts in _currentClientTranscodes[clientId].Values)
-                  {
-                    foreach(var transcodeContext in transcodeContexts)
-                      if(transcodeContext.Running) transcodeContext.Stop();
-                  }
-                  _currentClientTranscodes[clientId].Clear();
-                }
-                if(_currentClientTranscodes[clientId].ContainsKey(dlnaItem.TranscodingParameter.TranscodeId) == false)
-                {
-                  _currentClientTranscodes[clientId].Add(dlnaItem.TranscodingParameter.TranscodeId, new List<TranscodeContext>());
-                }
-                _currentClientTranscodes[clientId][dlnaItem.TranscodingParameter.TranscodeId].Add(context);
-              }
-            }
-
-            if (resourceStream == null)
-            {
-              response.Status = HttpStatusCode.InternalServerError;
-              response.Chunked = false;
-              response.ContentLength = 0;
-              response.ContentType = null;
-#if DEBUG
-              Logger.Debug("DlnaResourceAccessModule: Sending headers: " + response.SendHeaders());
-#else
-                response.SendHeaders();
-#endif
-              return true;
-            }
-
-            if (dlnaItem.IsStreamable == false)
-            {
-              Logger.Debug("DlnaResourceAccessModule: Live transcoding of mediaitem {0} is not possible because of media container", mediaItemGuid.ToString());
             }
 
             // HTTP/1.1 RFC2616 section 14.25 'If-Modified-Since'
@@ -821,40 +701,29 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
             }
             response.AddHeader("realTimeInfo.dlna.org", "DLNA.ORG_TLAG=*");
 
-            try
+            bool onlyHeaders = request.Method == Method.Header || response.Status == HttpStatusCode.NotModified;
+            if (requestedStreamingMode == StreamMode.TimeRange)
             {
-              bool onlyHeaders = request.Method == Method.Header || response.Status == HttpStatusCode.NotModified;
-              if (requestedStreamingMode == StreamMode.TimeRange)
+              Logger.Debug("DlnaResourceAccessModule: Sending time range header only: {0}", onlyHeaders.ToString());
+              if (ranges != null && ranges.Count == 1)
               {
-                Logger.Debug("DlnaResourceAccessModule: Sending time range header only: {0}", onlyHeaders.ToString());
-                if (ranges != null && ranges.Count == 1)
-                {
-                  // We only support one range
-                  SendTimeRange(request, response, resourceStream, dlnaItem, deviceClient, timeRange, byteRange, onlyHeaders, partialResource, mediaTransferMode);
-                  return true;
-                }
-              }
-              else if (requestedStreamingMode == StreamMode.ByteRange)
-              {
-                Logger.Debug("DlnaResourceAccessModule: Sending byte range header only: {0}", onlyHeaders.ToString());
-                if (ranges != null && ranges.Count == 1)
-                {
-                  // We only support one range
-                  SendByteRange(request, response, resourceStream, dlnaItem, deviceClient, byteRange, onlyHeaders, partialResource, mediaTransferMode);
-                  return true;
-                }
-              }
-              Logger.Debug("DlnaResourceAccessModule: Sending file header only: {0}", onlyHeaders.ToString());
-              SendWholeFile(request, response, resourceStream, dlnaItem, deviceClient, onlyHeaders, mediaTransferMode);
-            }
-            finally
-            {
-              if (partialResource == true)
-              {
-                context.Stop();
-                context.DeleteFiles();
+                // We only support one range
+                SendTimeRange(request, response, resourceStream, dlnaItem, deviceClient, ranges[0], onlyHeaders, mediaTransferMode);
+                return true;
               }
             }
+            else if (requestedStreamingMode == StreamMode.ByteRange)
+            {
+              Logger.Debug("DlnaResourceAccessModule: Sending byte range header only: {0}", onlyHeaders.ToString());
+              if (ranges != null && ranges.Count == 1)
+              {
+                // We only support one range
+                SendByteRange(request, response, resourceStream, dlnaItem, deviceClient, ranges[0], onlyHeaders, mediaTransferMode);
+                return true;
+              }
+            }
+            Logger.Debug("DlnaResourceAccessModule: Sending file header only: {0}", onlyHeaders.ToString());
+            SendWholeFile(request, response, resourceStream, dlnaItem, deviceClient, onlyHeaders, mediaTransferMode);
           }
         }
       }
@@ -866,7 +735,7 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
       return true;
     }
 
-    protected void SendTimeRange(IHttpRequest request, IHttpResponse response, Stream resourceStream, DlnaMediaItem item, Profiles.EndPointSettings client, Range timeRange, Range byteRange, bool onlyHeaders, bool partialResource, TransferMode mediaTransferMode)
+    protected void SendTimeRange(IHttpRequest request, IHttpResponse response, Stream resourceStream, DlnaMediaItem item, Profiles.EndPointSettings client, Range range, bool onlyHeaders, TransferMode mediaTransferMode)
     {
       if (item.IsTranscoding)
       {
@@ -874,7 +743,7 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
         Thread.Sleep(1000);
       }
       double duration = item.DlnaMetadata.Metadata.Duration;
-      if (timeRange.From > Convert.ToInt64(duration))
+      if (range.From > Convert.ToInt64(duration))
       {
         response.Status = HttpStatusCode.RequestedRangeNotSatisfiable;
 #if DEBUG
@@ -884,31 +753,22 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
 #endif
         return;
       }
-
-      long length = byteRange.Length;
-      if (item.IsSegmented == false && item.IsTranscoding == true)
+      double bitrate = 0;
+      if (item.IsSegmented == false)
       {
-        length = GetStreamSize(item);
+        bitrate = Convert.ToDouble(item.DlnaMetadata.Metadata.Bitrate) * 1024; //Bitrate in bits/s
       }
-      else
-      {
-        length = resourceStream.Length;
-      }
-      Range fileRange = ConvertToFileRange(byteRange, item, length);
 
+      long lengthByte = Convert.ToInt64((bitrate * duration) / 8.0);
       response.Status = HttpStatusCode.PartialContent;
-      response.ContentLength = byteRange.Length;
-      if (timeRange.Length == 0)
+      response.ContentLength = lengthByte;
+      if (duration == 0)
       {
-        response.AddHeader("TimeSeekRange.dlna.org", string.Format("npt={0}-", timeRange.From));
-      }
-      else if (duration == 0)
-      {
-        response.AddHeader("TimeSeekRange.dlna.org", string.Format("npt={0}-{1}", timeRange.From, timeRange.To));
+        response.AddHeader("TimeSeekRange.dlna.org", string.Format("npt={0}-", range.From));
       }
       else
       {
-        response.AddHeader("TimeSeekRange.dlna.org", string.Format("npt={0}-{1}/{2}", timeRange.From, timeRange.To, Convert.ToInt64(duration)));
+        response.AddHeader("TimeSeekRange.dlna.org", string.Format("npt={0}-{1}/{2}", range.From, range.To, Convert.ToInt64(duration)));
       }
 
       if (mediaTransferMode == TransferMode.Streaming && request.HttpVersion == HttpHelper.HTTP11 && client.Profile.Settings.Communication.AllowChunckedTransfer)
@@ -920,12 +780,16 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
         response.Chunked = false;
       }
 
-      Send(request, response, resourceStream, item, client, onlyHeaders, partialResource, fileRange);
+      long startByte = Convert.ToInt64((bitrate * range.From) / 8.0);
+      long endByte = Convert.ToInt64((bitrate * range.To) / 8.0);
+      Range byteRange = new Range(startByte, endByte);
+
+      Send(request, response, resourceStream, item, client, onlyHeaders, byteRange.From, byteRange.Length);
     }
 
-    protected void SendByteRange(IHttpRequest request, IHttpResponse response, Stream resourceStream, DlnaMediaItem item, Profiles.EndPointSettings client, Range range, bool onlyHeaders, bool partialResource, TransferMode mediaTransferMode)
+    protected void SendByteRange(IHttpRequest request, IHttpResponse response, Stream resourceStream, DlnaMediaItem item, Profiles.EndPointSettings client, Range range, bool onlyHeaders, TransferMode mediaTransferMode)
     {
-      if (partialResource == false && WaitForMinimumFileSize(resourceStream, range.From) == false)
+      if (WaitForMinimumFileSize(resourceStream, range.From) == false)
       {
         response.Status = HttpStatusCode.RequestedRangeNotSatisfiable;
         response.Chunked = false;
@@ -940,39 +804,58 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
       }
 
       long length = range.Length;
+      long toRange = range.To;
+      long fromRange = range.From;
       if (item.IsSegmented == false && item.IsTranscoding == true)
       {
-        length = GetStreamSize(item);
+        length = item.DlnaMetadata.Metadata.Size;
+         if (length == 0)
+         {
+           length = GetStreamSize(item);
+         }
+        if (range.To <= 0 || range.To > length)
+        {
+          toRange = length - 1;
+        }
       }
       else
       {
         length = resourceStream.Length;
+        if (range.From >= length)
+        {
+          fromRange = length;
+        }
+        if (range.To <= 0 || range.To > length)
+        {
+          toRange = length;
+        }
       }
-      Range fileRange = ConvertToFileRange(range, item, length);
-      if (fileRange.From < 0 || length <= fileRange.From)
-      {
-        response.Status = HttpStatusCode.RequestedRangeNotSatisfiable;
-        response.Chunked = false;
-        response.ContentLength = 0;
-        response.ContentType = null;
-#if DEBUG
-        Logger.Debug("DlnaResourceAccessModule: Sending headers: " + response.SendHeaders());
-#else
-        response.SendHeaders();
-#endif
-        return;
-      }
+
+//      if(length <= range.From)
+//      {
+//        response.Status = HttpStatusCode.RequestedRangeNotSatisfiable;
+//        response.Chunked = false;
+//        response.ContentLength = 0;
+//        response.ContentType = null;
+//#if DEBUG
+//        Logger.Debug("DlnaResourceAccessModule: Sending headers: " + response.SendHeaders());
+//#else
+//        response.SendHeaders();
+//#endif
+//        return;
+//      }
+      Range byteRange = new Range(fromRange, toRange);
 
       response.Status = HttpStatusCode.PartialContent;
-      response.ContentLength = range.Length;
+      response.ContentLength = length;
 
-      if (range.Length == 0)
+      if (length == 0)
       {
         response.AddHeader("Content-Range", string.Format("bytes {0}-", range.From));
       }
       else
       {
-        response.AddHeader("Content-Range", string.Format("bytes {0}-{1}/{2}", range.From, range.To, length));
+        response.AddHeader("Content-Range", string.Format("bytes {0}-{1}/{2}", byteRange.From, byteRange.To, length));
       }
 
       if (mediaTransferMode == TransferMode.Streaming && request.HttpVersion == HttpHelper.HTTP11 && client.Profile.Settings.Communication.AllowChunckedTransfer)// && item.IsTranscoding == true)
@@ -984,7 +867,7 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
         response.Chunked = false;
       }
 
-      Send(request, response, resourceStream, item, client, onlyHeaders, partialResource, fileRange);
+      Send(request, response, resourceStream, item, client, onlyHeaders, byteRange.From, byteRange.Length);
     }
 
     protected void SendWholeFile(IHttpRequest request, IHttpResponse response, Stream resourceStream, DlnaMediaItem item, Profiles.EndPointSettings client, bool onlyHeaders, TransferMode mediaTransferMode)
@@ -1001,17 +884,22 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
       }
 
       long length = resourceStream.Length;
+      long streamLength = resourceStream.Length;
       if (item.IsSegmented == false && item.IsTranscoding == true)
       {
-        length = GetStreamSize(item);
+        streamLength = 0;
+        length = item.DlnaMetadata.Metadata.Size;
+        if (length == 0)
+        {
+          length = GetStreamSize(item);
+        }
       }
 
       response.Status = HttpStatusCode.OK;
       response.ContentLength = length;
       response.Chunked = false;
 
-      Range byteRange = new Range(0, length);
-      Send(request, response, resourceStream, item, client, onlyHeaders, false, byteRange);
+      Send(request, response, resourceStream, item, client, onlyHeaders, 0, streamLength);
     }
 
     protected void SendResourceFile(IHttpRequest request, IHttpResponse response, Stream resourceStream, bool onlyHeaders)
@@ -1064,7 +952,7 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
       return true;
     }
 
-    protected void Send(IHttpRequest request, IHttpResponse response, Stream resourceStream, DlnaMediaItem item, Profiles.EndPointSettings client, bool onlyHeaders, bool partialResource, Range byteRange)
+    protected void Send(IHttpRequest request, IHttpResponse response, Stream resourceStream, DlnaMediaItem item, Profiles.EndPointSettings client, bool onlyHeaders, long start, long length)
     {
 #if DEBUG
       Logger.Debug("DlnaResourceAccessModule: Sending headers: " + response.SendHeaders());
@@ -1093,38 +981,32 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
         byte[] buffer = new byte[bufferSize];
         int bytesRead;
         long count = 0;
-        bool isStream = false;
+        bool bIsStream = false;
         long waitForSize = 0;
-        if (byteRange.Length == 0 || (byteRange.Length > 0 && byteRange.Length >= client.Profile.Settings.Communication.InitialBufferSize))
+        if (length == 0 || (length > 0 && length >= client.Profile.Settings.Communication.InitialBufferSize))
         {
           waitForSize = client.Profile.Settings.Communication.InitialBufferSize;
         }
-        if (partialResource == false)
+        if (start > waitForSize)
         {
-          if (waitForSize < byteRange.From) waitForSize = byteRange.From;
+          waitForSize = start;
         }
         if (WaitForMinimumFileSize(resourceStream, waitForSize) == false)
         {
-          Logger.Error("DlnaResourceAccessModule: Unable to send stream beacause of invalid length: {0} ({1} required)", resourceStream.Length, waitForSize);
+          Logger.Error("DlnaResourceAccessModule: Unable to send stream beacause of invalid length: {0} ({1} required)", resourceStream.Length, start);
           return;
         }
-        long start = 0;
-        if (partialResource == false)
-        {
-          start = byteRange.From;
-        }
         resourceStream.Seek(start, SeekOrigin.Begin);
-        long length = byteRange.Length;
-        if (length <= 0 || (item.IsSegmented == false && item.IsTranscoding == true))
+        if (length <= 0)
         {
-          isStream = true;
+          bIsStream = true;
           length = resourceStream.Length;
         }
         while (item.IsStreamActive(streamID) && length > 0)
         {
           bytesRead = resourceStream.Read(buffer, 0, length > bufferSize ? bufferSize : (int)length);
           count += bytesRead;
-          if (isStream)
+          if (bIsStream)
           {
             length = resourceStream.Length - count;
           }
@@ -1147,7 +1029,7 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
           }
           if (item.IsSegmented == false && item.IsTranscoding)
           {
-            while (isStream && item.IsStreamActive(streamID) && item.IsTranscoding && length == 0)
+            while (bIsStream && item.IsStreamActive(streamID) && item.IsTranscoding && length == 0)
             {
               Thread.Sleep(10);
               length = resourceStream.Length - start - count;
@@ -1163,8 +1045,6 @@ namespace MediaPortal.Extensions.MediaServer.ResourceAccess
       }
       finally
       {
-        // closes the Stream so that FFMpeg can replace the playlist file in case of HLS
-        resourceStream.Close();
         item.StopStreaming(streamID);
         Logger.Debug("Sending complete");
       }

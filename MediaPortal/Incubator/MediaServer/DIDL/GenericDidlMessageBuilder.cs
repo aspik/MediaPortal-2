@@ -96,8 +96,6 @@ namespace MediaPortal.Extensions.MediaServer.DIDL
 
     protected virtual void BuildInternal(object directoryPropertyObject)
     {
-      if (directoryPropertyObject == null)
-        return;
       if (!_hasCompleted)
       {
         if (directoryPropertyObject is IDirectoryContainer)

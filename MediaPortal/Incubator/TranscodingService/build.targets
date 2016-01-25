@@ -2,18 +2,23 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
 
   <PropertyGroup>
-    <PluginDestination>$(SolutionDir)..\Bin\$(SolutionName)\$(OutDir)Plugins\$(ProjectName)\</PluginDestination>
+    <PluginDestination>$(SolutionDir)..\Bin\$(SolutionName)\$(OutDir)Plugins\MediaServer\</PluginDestination>
   </PropertyGroup>
 
   <Target Name="AfterBuild">
     <ItemGroup>
       <PluginFiles Include="$(TargetDir)$(ProjectName).dll" />
       <PluginFiles Include="$(TargetDir)Ude.dll" />
-      <PluginFiles Include="$(TargetDir)*.pdb" />
-      <PluginFiles Include="$(ProjectDir)plugin.xml" />
+      <PluginFiles Include="$(ProjectDir)Transcoders\*.*" />
     </ItemGroup>
 
+    <CreateItem Include="$(ProjectDir)Transcoders\fonts\**\*.*">
+      <Output TaskParameter="Include" ItemName="fonts" />
+    </CreateItem>
+
     <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(PluginDestination)" />
+
+    <Copy SourceFiles="@(fonts)" DestinationFolder="$(PluginDestination)\fonts\%(RecursiveDir)" />
   </Target>
 
 </Project>
