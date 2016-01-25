@@ -28,6 +28,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using HttpServer;
+using HttpServer.Authentication;
 using HttpServer.HttpModules;
 using MediaPortal.Common.Logging;
 using MediaPortal.Common.ResourceAccess;
@@ -161,22 +162,14 @@ namespace MediaPortal.Common.Services.ResourceAccess
 
     #region IResourceServer implementation
 
-    public int PortIPv4
+    public int GetPortForIP(IPAddress ipAddress)
     {
-      get
-      {
-        var server = _httpServers.Values.FirstOrDefault(s => s.IsIPv4);
-        return server != null ? server.Port : 0;
-      }
-    }
+      HttpServer.HttpServer server;
+      if (_httpServers.TryGetValue(ipAddress, out server))
+        return server.Port;
 
-    public int PortIPv6
-    {
-      get
-      {
-        var server = _httpServers.Values.FirstOrDefault(s => s.IsIPv6);
-        return server != null ? server.Port : 0;
-      }
+      server = _httpServers.Values.FirstOrDefault(s => ipAddress.AddressFamily == AddressFamily.InterNetwork ? s.IsIPv4 : s.IsIPv6);
+      return server != null ? server.Port : 0;
     }
 
     public void Startup()
@@ -200,6 +193,11 @@ namespace MediaPortal.Common.Services.ResourceAccess
     public void AddHttpModule(HttpModule module)
     {
       _httpServers.Values.ToList().ForEach(x => x.Add(module));
+    }
+
+    public void AddAuthenticationModule(AuthenticationModule module)
+    {
+      _httpServers.Values.ToList().ForEach(x => x.AuthenticationModules.Add(module));
     }
 
     public void RemoveHttpModule(HttpModule module)
