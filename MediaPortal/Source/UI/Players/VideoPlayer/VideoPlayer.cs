@@ -33,8 +33,10 @@ using DirectShow.Helper;
 using MediaPortal.Common;
 using MediaPortal.Common.Localization;
 using MediaPortal.Common.Logging;
+using MediaPortal.Common.ResourceAccess;
 using MediaPortal.Common.Settings;
 using MediaPortal.UI.Players.Video.Settings;
+using MediaPortal.UI.Players.Video.Subtitles;
 using MediaPortal.UI.Players.Video.Tools;
 using MediaPortal.UI.Presentation.Geometries;
 using MediaPortal.UI.Presentation.Players;
@@ -188,6 +190,19 @@ namespace MediaPortal.UI.Players.Video
         return;
       }
       _graphBuilder.AddFilter(vsFilter, VSFILTER_NAME);
+    }
+
+    protected override void AddSubtitleEngine()
+    {
+      var fileSystemResourceAccessor = _resourceAccessor as IFileSystemResourceAccessor;
+      if (fileSystemResourceAccessor != null)
+      {
+        SubtitleStyle defStyle = new SubtitleStyle();
+        defStyle.Load();
+        MpcSubtitles.SetDefaultStyle(ref defStyle, false);
+        string filename = fileSystemResourceAccessor.ResourcePathName;
+        MpcSubtitles.LoadSubtitles(_instancePtr, _displaySize, filename, _graphBuilder, @".\", 0);
+      }
     }
 
     #endregion
