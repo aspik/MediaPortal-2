@@ -200,8 +200,10 @@ namespace MediaPortal.UI.Players.Video
         SubtitleStyle defStyle = new SubtitleStyle();
         defStyle.Load();
         MpcSubtitles.SetDefaultStyle(ref defStyle, false);
+
+        IntPtr upDevice = SkinContext.Device.NativePointer;
         string filename = fileSystemResourceAccessor.ResourcePathName;
-        MpcSubtitles.LoadSubtitles(_instancePtr, _displaySize, filename, _graphBuilder, @".\", 0);
+        MpcSubtitles.LoadSubtitles(upDevice, _displaySize, filename, _graphBuilder, @".\", 0);
       }
     }
 
