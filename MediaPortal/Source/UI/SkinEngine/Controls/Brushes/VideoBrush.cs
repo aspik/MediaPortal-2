@@ -318,6 +318,11 @@ namespace MediaPortal.UI.SkinEngine.Controls.Brushes
       if (!GetPlayer(out player))
         return false;
 
+     // MPC-HC subtitles
+     // player.LoadSubtitles();
+     // player.SetEnabled(true);
+     // player.Render(0,0,0,0);
+
       if (!RefreshEffectParameters(player))
         return false;
 

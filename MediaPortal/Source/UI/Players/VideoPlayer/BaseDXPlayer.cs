@@ -238,8 +238,6 @@ namespace MediaPortal.UI.Players.Video
         ServiceRegistration.Get<ILogger>().Debug("{0}: Adding source filter", PlayerTitle);
         AddSourceFilter();
 
-        AddSubtitleEngine();
-
         ServiceRegistration.Get<ILogger>().Debug("{0}: Run graph", PlayerTitle);
 
         //This needs to be done here before we check if the evr pins are connected
@@ -444,7 +442,6 @@ namespace MediaPortal.UI.Players.Video
         new HRESULT(hr).Throw();
 
         ServiceRegistration.Get<ILogger>().Debug("{0}: Adding subtitle filter", PlayerTitle);
-    //    AddSubtitleFilter();
 
         using(DSFilter source2 = new DSFilter(sourceFilter))
           hr = source2.OutputPin.Render();
@@ -460,10 +457,6 @@ namespace MediaPortal.UI.Players.Video
     /// Adds subtitle filter if any.
     /// </summary>
     protected virtual void AddSubtitleFilter()
-    {
-    }
-
-    protected virtual void AddSubtitleEngine()
     {
     }
 

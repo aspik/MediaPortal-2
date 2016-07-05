@@ -104,6 +104,7 @@ namespace MediaPortal.UI.Players.Video
     // DirectShow objects
     protected IBaseFilter _evr;
     protected EVRCallback _evrCallback;
+    protected GraphRebuilder _graphRebuilder;
 
     // Managed Direct3D Resources
     protected Size _displaySize = new Size(100, 100);
@@ -192,20 +193,12 @@ namespace MediaPortal.UI.Players.Video
       _graphBuilder.AddFilter(vsFilter, VSFILTER_NAME);
     }
 
-    protected override void AddSubtitleEngine()
-    {
-      var fileSystemResourceAccessor = _resourceAccessor as IFileSystemResourceAccessor;
-      if (fileSystemResourceAccessor != null)
-      {
-        SubtitleStyle defStyle = new SubtitleStyle();
-        defStyle.Load();
-        MpcSubtitles.SetDefaultStyle(ref defStyle, false);
-
-        IntPtr upDevice = SkinContext.Device.NativePointer;
-        string filename = fileSystemResourceAccessor.ResourcePathName;
-        MpcSubtitles.LoadSubtitles(upDevice, _displaySize, filename, _graphBuilder, @".\", 0);
-      }
-    }
+    //protected override void AddSourceFilter()
+    //{
+    //  this.LoadSubtitles();
+    //  this.SetEnabled(true);
+    //  _graphRebuilder = new GraphRebuilder(_graphBuilder, _sourceFilter, OnAfterGraphRebuild) { PlayerName = PlayerTitle };
+    //}
 
     #endregion
 
@@ -292,6 +285,32 @@ namespace MediaPortal.UI.Players.Video
     #endregion
 
     #region ISharpDXVideoPlayer implementation
+
+    public bool LoadSubtitles()
+    {
+      var fileSystemResourceAccessor = _resourceAccessor as IFileSystemResourceAccessor;
+      if (fileSystemResourceAccessor != null)
+      {
+        SubtitleStyle defStyle = new SubtitleStyle();
+        defStyle.Load();
+        MpcSubtitles.SetDefaultStyle(ref defStyle, false);
+
+        IntPtr upDevice = SkinContext.Device.NativePointer;
+        string filename = fileSystemResourceAccessor.ResourcePathName;
+        return MpcSubtitles.LoadSubtitles(upDevice, _displaySize, filename, _graphBuilder, @".\", 0);
+      }
+      return false;
+    }
+
+    public void Render(int x, int y, int width, int height)
+    {
+      MpcSubtitles.Render(x, y, width, height);
+    }
+
+    public void SetEnabled(bool isEnabled)
+    {
+      MpcSubtitles.SetEnable(true);
+    }
 
     public override string Name
     {

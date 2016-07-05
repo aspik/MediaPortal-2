@@ -77,5 +77,21 @@ namespace MediaPortal.UI.SkinEngine.Players
     /// Reallocs any GUI resources.
     /// </summary>
     void ReallocGUIResources();
+
+    /// <summary>
+    /// Loads subtitles for the MPC-HC subtitle engine
+    /// </summary>
+    bool LoadSubtitles();
+
+    /// <summary>
+    /// Enables the subtitles for the MPC-HC subtitle engine
+    /// </summary>
+    void SetEnabled(bool isEnabled);
+
+    /// <summary>
+    /// Renders subtitles with the MPC-HC subtitle engine
+    /// </summary>
+    void Render(int x, int y, int width, int height);
+
   }
 }
