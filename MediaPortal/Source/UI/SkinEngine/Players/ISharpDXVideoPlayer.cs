@@ -81,7 +81,7 @@ namespace MediaPortal.UI.SkinEngine.Players
     /// <summary>
     /// Loads subtitles for the MPC-HC subtitle engine
     /// </summary>
-    bool LoadSubtitles();
+    void LoadSubtitles();
 
     /// <summary>
     /// Enables the subtitles for the MPC-HC subtitle engine

@@ -96,6 +96,8 @@ namespace MediaPortal.UI.Players.Video
     public const string VSFILTER_CLSID = "{9852A670-F845-491b-9BE6-EBD841B8A613}";
     public const string VSFILTER_NAME = "xy-VSFilter";
     public const string VSFILTER_FILENAME = "VSFilter.dll";
+    public const string mpcSubs = "mpcSubs.dll";
+    public const string mpcSubs_clsid = "{E2BA9B7B-B65D-4804-ACB2-89C3E55511DB}";
 
     #endregion
 
@@ -105,6 +107,7 @@ namespace MediaPortal.UI.Players.Video
     protected IBaseFilter _evr;
     protected EVRCallback _evrCallback;
     protected GraphRebuilder _graphRebuilder;
+    protected IBaseFilter _subsFilter = null;
 
     // Managed Direct3D Resources
     protected Size _displaySize = new Size(100, 100);
@@ -184,13 +187,22 @@ namespace MediaPortal.UI.Players.Video
 
     protected override void AddSubtitleFilter()
     {
-      var vsFilter = FilterLoader.LoadFilterFromDll(VSFILTER_FILENAME, new Guid(VSFILTER_CLSID), true);
-      if (vsFilter == null)
+      //var vsFilter = FilterLoader.LoadFilterFromDll(VSFILTER_FILENAME, new Guid(VSFILTER_CLSID), true);
+      //if (vsFilter == null)
+      //{
+      //  ServiceRegistration.Get<ILogger>().Warn("{0}: Failed to add {1} to graph", PlayerTitle, VSFILTER_NAME);
+      //  return;
+      //}
+      //_graphBuilder.AddFilter(vsFilter, VSFILTER_NAME);
+      
+      var Subs = FilterLoader.LoadFilterFromDll(mpcSubs, new Guid(mpcSubs_clsid), true);
+      if (Subs == null)
       {
-        ServiceRegistration.Get<ILogger>().Warn("{0}: Failed to add {1} to graph", PlayerTitle, VSFILTER_NAME);
+        ServiceRegistration.Get<ILogger>().Warn("{0}: Failed to add {1} to graph", PlayerTitle, mpcSubs);
         return;
       }
-      _graphBuilder.AddFilter(vsFilter, VSFILTER_NAME);
+      _graphBuilder.AddFilter(Subs, mpcSubs);
+      //   this.LoadSubtitles();
     }
 
     //protected override void AddSourceFilter()
@@ -286,7 +298,7 @@ namespace MediaPortal.UI.Players.Video
 
     #region ISharpDXVideoPlayer implementation
 
-    public bool LoadSubtitles()
+    public void LoadSubtitles()
     {
       var fileSystemResourceAccessor = _resourceAccessor as IFileSystemResourceAccessor;
       if (fileSystemResourceAccessor != null)
@@ -297,9 +309,10 @@ namespace MediaPortal.UI.Players.Video
 
         IntPtr upDevice = SkinContext.Device.NativePointer;
         string filename = fileSystemResourceAccessor.ResourcePathName;
-        return MpcSubtitles.LoadSubtitles(upDevice, _displaySize, filename, _graphBuilder, @".\", 0);
+        MpcSubtitles.LoadSubtitles(upDevice, _displaySize, filename, _graphBuilder, @".\", 0);
+        _graphBuilder.AddFilter(_subsFilter, "");
+        
       }
-      return false;
     }
 
     public void Render(int x, int y, int width, int height)

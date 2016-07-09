@@ -442,8 +442,9 @@ namespace MediaPortal.UI.Players.Video
         new HRESULT(hr).Throw();
 
         ServiceRegistration.Get<ILogger>().Debug("{0}: Adding subtitle filter", PlayerTitle);
+        AddSubtitleFilter();
 
-        using(DSFilter source2 = new DSFilter(sourceFilter))
+        using (DSFilter source2 = new DSFilter(sourceFilter))
           hr = source2.OutputPin.Render();
         new HRESULT(hr).Throw();
 
