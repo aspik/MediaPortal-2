@@ -94,4 +94,16 @@ namespace MediaPortal.UI.SkinEngine.Players
     void Render(int x, int y, int width, int height);
 
   }
+
+  /// <summary>
+  /// Extended support for multiple texture planes.
+  /// </summary>
+  public interface ISharpDXMultiTexturePlayer : ISharpDXVideoPlayer
+  {
+    /// <summary>
+    /// Returns additional texture planes that will be overlayed over the original <see cref="Texture"/>.
+    /// This can be used for OSD (like BluRay player) or subtitles.
+    /// </summary>
+    Texture[] TexturePlanes { get; } 
+  }
 }
