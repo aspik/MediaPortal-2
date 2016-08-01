@@ -451,14 +451,10 @@ namespace MediaPortal.UI.SkinEngine.Controls.Brushes
     protected override bool BeginRenderBrushOverride(PrimitiveBuffer primitiveContext, RenderContext renderContext)
     {
       // Clear last context
+      
       _lastBeginContext = null;
       bool result = false;
       foreach (var brushContext in _brushContexts)
-     // MPC-HC subtitles
-     // player.LoadSubtitles();
-     // player.SetEnabled(true);
-     // player.Render(0,0,0,0);
-
       {
         // We can only begin a new render pass if the previous ended
         if (_lastBeginContext != null && brushContext.IsValid())

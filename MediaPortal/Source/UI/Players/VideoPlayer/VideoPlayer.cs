@@ -43,6 +43,7 @@ using MediaPortal.UI.Presentation.Players;
 using MediaPortal.UI.Presentation.Players.ResumeState;
 using MediaPortal.UI.SkinEngine;
 using MediaPortal.UI.SkinEngine.Players;
+using MediaPortal.UI.SkinEngine.Rendering;
 using MediaPortal.UI.SkinEngine.SkinManagement;
 using MediaPortal.Utilities.Exceptions;
 using SharpDX;
@@ -53,7 +54,7 @@ using PointF = SharpDX.Vector2;
 
 namespace MediaPortal.UI.Players.Video
 {
-  public class VideoPlayer : BaseDXPlayer, ISharpDXVideoPlayer, ISubtitlePlayer, IChapterPlayer, ITitlePlayer, IResumablePlayer
+  public class VideoPlayer : BaseDXPlayer, ISharpDXMultiTexturePlayer, ISubtitlePlayer, IChapterPlayer, ITitlePlayer, IResumablePlayer
   {
     #region Classes & interfaces
 
@@ -96,8 +97,6 @@ namespace MediaPortal.UI.Players.Video
     public const string VSFILTER_CLSID = "{9852A670-F845-491b-9BE6-EBD841B8A613}";
     public const string VSFILTER_NAME = "xy-VSFilter";
     public const string VSFILTER_FILENAME = "VSFilter.dll";
-    public const string mpcSubs = "mpcSubs.dll";
-    public const string mpcSubs_clsid = "{E2BA9B7B-B65D-4804-ACB2-89C3E55511DB}";
 
     #endregion
 
@@ -144,6 +143,7 @@ namespace MediaPortal.UI.Players.Video
     protected string[] _chapterNames = null;
 
     protected bool _textureInvalid = true;
+    protected MpcSubsRenderer _mpcSubsRenderer;
 
     #endregion
 
@@ -159,6 +159,7 @@ namespace MediaPortal.UI.Players.Video
         throw new EnvironmentException("This video player can only run on Windows Vista or above");
 
       PlayerTitle = "VideoPlayer";
+      _mpcSubsRenderer = new MpcSubsRenderer(OnTextureInvalidated);
     }
 
     #endregion
@@ -187,30 +188,31 @@ namespace MediaPortal.UI.Players.Video
 
     protected override void AddSubtitleFilter()
     {
-      //var vsFilter = FilterLoader.LoadFilterFromDll(VSFILTER_FILENAME, new Guid(VSFILTER_CLSID), true);
-      //if (vsFilter == null)
-      //{
-      //  ServiceRegistration.Get<ILogger>().Warn("{0}: Failed to add {1} to graph", PlayerTitle, VSFILTER_NAME);
-      //  return;
-      //}
-      //_graphBuilder.AddFilter(vsFilter, VSFILTER_NAME);
-      
-      var Subs = FilterLoader.LoadFilterFromDll(mpcSubs, new Guid(mpcSubs_clsid), true);
-      if (Subs == null)
+      var vsFilter = FilterLoader.LoadFilterFromDll(VSFILTER_FILENAME, new Guid(VSFILTER_CLSID), true);
+      if (vsFilter == null)
       {
-        ServiceRegistration.Get<ILogger>().Warn("{0}: Failed to add {1} to graph", PlayerTitle, mpcSubs);
+        ServiceRegistration.Get<ILogger>().Warn("{0}: Failed to add {1} to graph", PlayerTitle, VSFILTER_NAME);
         return;
       }
-      _graphBuilder.AddFilter(Subs, mpcSubs);
-      //   this.LoadSubtitles();
+      _graphBuilder.AddFilter(vsFilter, VSFILTER_NAME);
     }
 
-    //protected override void AddSourceFilter()
-    //{
-    //  this.LoadSubtitles();
-    //  this.SetEnabled(true);
-    //  _graphRebuilder = new GraphRebuilder(_graphBuilder, _sourceFilter, OnAfterGraphRebuild) { PlayerName = PlayerTitle };
-    //}
+    protected override void AddSubtitleEngine()
+    {
+      var fileSystemResourceAccessor = _resourceAccessor as IFileSystemResourceAccessor;
+      if (fileSystemResourceAccessor != null)
+      {
+        SubtitleStyle defStyle = new SubtitleStyle();
+        defStyle.Load();
+        MpcSubtitles.SetDefaultStyle(ref defStyle, false);
+
+        IntPtr upDevice = SkinContext.Device.NativePointer;
+        string filename = fileSystemResourceAccessor.ResourcePathName;
+
+        MpcSubtitles.LoadSubtitles(upDevice, _displaySize, filename, _graphBuilder, @".\", 0);
+        MpcSubtitles.SetEnable(true);
+      }
+    }
 
     #endregion
 
@@ -298,33 +300,6 @@ namespace MediaPortal.UI.Players.Video
 
     #region ISharpDXVideoPlayer implementation
 
-    public void LoadSubtitles()
-    {
-      var fileSystemResourceAccessor = _resourceAccessor as IFileSystemResourceAccessor;
-      if (fileSystemResourceAccessor != null)
-      {
-        SubtitleStyle defStyle = new SubtitleStyle();
-        defStyle.Load();
-        MpcSubtitles.SetDefaultStyle(ref defStyle, false);
-
-        IntPtr upDevice = SkinContext.Device.NativePointer;
-        string filename = fileSystemResourceAccessor.ResourcePathName;
-        MpcSubtitles.LoadSubtitles(upDevice, _displaySize, filename, _graphBuilder, @".\", 0);
-        _graphBuilder.AddFilter(_subsFilter, "");
-        
-      }
-    }
-
-    public void Render(int x, int y, int width, int height)
-    {
-      MpcSubtitles.Render(x, y, width, height);
-    }
-
-    public void SetEnabled(bool isEnabled)
-    {
-      MpcSubtitles.SetEnable(true);
-    }
-
     public override string Name
     {
       get { return "Video"; }
@@ -368,6 +343,7 @@ namespace MediaPortal.UI.Players.Video
             return null;
 
           PostProcessTexture(videoTexture);
+         // _mpcSubsRenderer.DrawItem();
           _textureInvalid = false;
           return videoTexture;
         }
@@ -385,7 +361,13 @@ namespace MediaPortal.UI.Players.Video
     /// </summary>
     /// <param name="targetTexture"></param>
     protected virtual void PostProcessTexture(Texture targetTexture)
-    { }
+    {}
+
+    public virtual Texture[] TexturePlanes
+    {
+      get { return _mpcSubsRenderer.TexturePlanes; }
+    }
+
 
     public IGeometry GeometryOverride
     {
