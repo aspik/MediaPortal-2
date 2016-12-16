@@ -40,7 +40,6 @@ using SharpDX.Direct2D1;
 using SharpDX.Direct3D11;
 using Size = SharpDX.Size2;
 using SizeF = SharpDX.Size2F;
-using PointF = SharpDX.Vector2;
 
 namespace MediaPortal.UI.Players.Video
 {

@@ -32,6 +32,7 @@ using MediaPortal.UI.SkinEngine.SkinManagement;
 using SharpDX;
 using SharpDX.D3DCompiler;
 using SharpDX.Direct2D1;
+using SharpDX.Mathematics.Interop;
 
 namespace MediaPortal.UI.SkinEngine.Controls.Visuals.Effects2D
 {
@@ -193,6 +194,21 @@ namespace MediaPortal.UI.SkinEngine.Controls.Visuals.Effects2D
         _drawInformation.SetPixelConstantBuffer(ref _effectParams);
         _drawInformation.SetVertexConstantBuffer(ref _effectParams);
       }
+    }
+
+    public void MapOutputRectangleToInputRectangles(RawRectangle outputRect, RawRectangle[] inputRects)
+    {
+      throw new NotImplementedException();
+    }
+
+    public RawRectangle MapInputRectanglesToOutputRectangle(RawRectangle[] inputRects, RawRectangle[] inputOpaqueSubRects, out RawRectangle outputOpaqueSubRect)
+    {
+      throw new NotImplementedException();
+    }
+
+    public RawRectangle MapInvalidRect(int inputIndex, RawRectangle invalidInputRect)
+    {
+      throw new NotImplementedException();
     }
   }
 }
